@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "skin-lipid-tools"
+version = "0.1.0"
+description = "In silico PACE (AD lipid-enzyme prioritisation) and lipid annotation QC with retention-time prediction"
+requires-python = ">=3.10"
+dependencies = [
+  "pandas>=2", "numpy", "scipy", "scikit-learn", "matplotlib", "requests", "openpyxl", "tabulate",
+]
+
+[project.optional-dependencies]
+linex = ["linex2>=1.1", "setuptools<81"]
+dev = ["pytest"]
+
+[project.scripts]
+insilico-pace = "insilico_pace.__main__:main"
+lipid-rt-qc = "lipid_rt_qc.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
