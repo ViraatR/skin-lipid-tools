@@ -21,13 +21,13 @@ from lipidname import parse
 
 from .io import Dataset
 from .masses import ADDUCTS, NEGATIVE, POSITIVE, enumerate_isobars, mz as calc_mz
-from .model import RTModel, expected_chains, lipid_features, robust_z
+from .model import RTModel, expected_chains, lipid_features, model_class, robust_z
 
 
 def annotate(ds: Dataset) -> pd.DataFrame:
     f = ds.features.copy()
     f["lipid"] = f["name"].map(parse)
-    f["lipid_class"] = f["lipid"].map(lambda l: l.lipid_class if l else None)
+    f["lipid_class"] = f["lipid"].map(lambda l: model_class(l) if l else None)
     f["species"] = f["lipid"].map(lambda l: l.key if l else None)
     # MS-DIAL puts the adduct in the name when there is no separate column
     missing = f["adduct"].fillna("").eq("")
@@ -68,7 +68,7 @@ def elution_order(f: pd.DataFrame, rt: pd.DataFrame, tol: float = 0.1) -> pd.Dat
         else:
             blame[b.Index] += 1; notes[b.Index].append(why_b)
 
-    ok = ok.assign(cls=ok["lipid"].map(lambda l: l.lipid_class), c=ok["lipid"].map(lambda l: l.total_c),
+    ok = ok.assign(cls=ok["lipid"].map(model_class), c=ok["lipid"].map(lambda l: l.total_c),
                    d=ok["lipid"].map(lambda l: l.total_db))
     for cls, g in ok.groupby("cls"):
         rows = list(g.itertuples())

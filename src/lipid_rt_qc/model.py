@@ -26,6 +26,7 @@ FEATURES = ["cls_code", "total_c", "total_db", "total_oh", "ether", "base_db", "
 
 def expected_chains(cls: str) -> int:
     """Chains implied by the class (independent of how detailed the name is)."""
+    cls = cls.split(";")[0]
     if cls.startswith("Cer_EO") or cls in ("TG",) or cls.endswith("_EST"):
         return 3 + cls.endswith("_EST")
     if cls in ("CL",):
@@ -35,13 +36,21 @@ def expected_chains(cls: str) -> int:
     return 2
 
 
+def model_class(l: Lipid) -> str:
+    """Class used for RT modelling. Oxidised glycerolipids (e.g. 'TG 48:1;O') elute
+    well before their parents, so each oxidation state gets its own trend line."""
+    if l.total_oh and not l.is_sphingolipid:
+        return f"{l.lipid_class};O{l.total_oh}"
+    return l.lipid_class
+
+
 def lipid_features(lipids: pd.Series) -> pd.DataFrame:
     rows = []
     for fid, l in lipids.items():
         if l is None:
             continue
         rows.append({
-            "feature_id": fid, "lipid_class": l.lipid_class, "total_c": l.total_c, "total_db": l.total_db,
+            "feature_id": fid, "lipid_class": model_class(l), "total_c": l.total_c, "total_db": l.total_db,
             "total_oh": l.total_oh, "ether": int(l.lipid_class.endswith(("-O", "-P"))),
             "base_db": l.base[1] if l.base else -1, "n_chains": expected_chains(l.lipid_class),
         })
@@ -73,7 +82,7 @@ class RTModel:
 
     def _gbm(self):
         # absolute-error loss: a mis-annotated feature must not drag its neighbours
-        return HistGradientBoostingRegressor(loss="absolute_error", max_iter=200, learning_rate=0.05, max_leaf_nodes=15,
+        return HistGradientBoostingRegressor(loss="absolute_error", max_iter=150, learning_rate=0.05, max_leaf_nodes=15,
                                              min_samples_leaf=5, l2_regularization=1.0,
                                              categorical_features=[0], random_state=self.seed)
 
@@ -115,7 +124,8 @@ class RTModel:
         base = self._lin_predict(lin, pooled, intercepts, X)
         have = ~np.isnan(base)
         corr = self._gbm().fit(X.loc[have, FEATURES].to_numpy(float), (y - base)[have]) if have.sum() > 20 else None
-        raw = self._gbm().fit(X[FEATURES].to_numpy(float), y)  # for classes with no linear fit
+        # fallback for classes with no linear fit (rare); skipped when every class has one
+        raw = self._gbm().fit(X[FEATURES].to_numpy(float), y) if (~have).any() else None
         return lin, pooled, intercepts, corr, raw
 
     def _predict(self, parts, X: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
@@ -127,7 +137,8 @@ class RTModel:
         pred = base + (corr.predict(F) if corr is not None else 0.0)
         known = Xc["cls_code"].to_numpy() >= 0
         fallback = np.isnan(base) & known
-        pred[fallback] = raw.predict(F[fallback]) if fallback.any() else pred[fallback]
+        if fallback.any() and raw is not None:
+            pred[fallback] = raw.predict(F[fallback])
         return pred, base
 
     def fit(self, X: pd.DataFrame, y: pd.Series) -> "RTModel":

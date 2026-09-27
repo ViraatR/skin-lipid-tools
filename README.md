@@ -8,7 +8,7 @@ This repo holds two computational projects for skin lipid biology. Both are buil
 | | Project | Question | Status |
 |---|---|---|---|
 | 1 | [`insilico_pace`](src/insilico_pace) | Using only public data, which skin enzymes should PACE find dysregulated in atopic dermatitis? | Pipeline runs end to end; results are in [`results/insilico_pace`](results/insilico_pace/SUMMARY.md) |
-| 2 | [`lipid_rt_qc`](src/lipid_rt_qc) | Which lipid annotations in an MS-DIAL or Skyline export look suspicious? | See [Project 2](#project-2-lipid-annotation-qc-with-retention-time-prediction) |
+| 2 | [`lipid_rt_qc`](src/lipid_rt_qc) | Which lipid annotations in an MS-DIAL or Skyline export look suspicious? | CLI works; validated on 3 public runs ([results](results/lipid_rt_qc)) |
 
 Both projects share [`lipidname`](src/lipidname/__init__.py), a lipid-name parser. It reads MS-DIAL names
 (`Cer[NS] 50:3; Cer[NS](d18:1/32:2); [M+Hac-H]-`), LIPID MAPS shorthand (`Cer 18:1;O2/24:0`) and
@@ -109,7 +109,72 @@ IL-4/IL-13 ABPP gel/MS are PLA2G4D, PLA2G4E, PLA2G4F, AADACL2, PNLIPRP3, EPHX3, 
 
 ## Project 2: lipid annotation QC with retention-time prediction
 
-See [`src/lipid_rt_qc`](src/lipid_rt_qc) and the section below once built.
+`lipid-rt-qc` reads an MS-DIAL alignment export, a Skyline report or a MetaboLights MAF, and flags
+annotations that don't fit the run's own chromatography. It also automates blank filtering and QC-CV checks.
+
+```bash
+lipid-rt-qc run Height_0_2026.txt --out qc/            # MS-DIAL alignment export
+lipid-rt-qc run skyline_report.csv --blank "blank|PBS"  # Skyline long-format report
+lipid-rt-qc benchmark Height_0_2026.txt --out bench/   # how well RT QC works on *your* data
+```
+
+The output is `lipid_qc_report.html`, a self-contained page with figures that opens offline. It comes with
+`lipid_qc_flagged.csv`, which lists each flagged feature and why, and `lipid_qc_all_features.csv`.
+
+### Checks
+
+| Flag | What it means |
+|---|---|
+| **RT off-model** | The observed RT is more than 3 robust SD (and more than 0.2 min) from the RT predicted for that class, C and DB. The model is trained on the same run, and each feature is scored out-of-fold, so a bad annotation can't vouch for itself |
+| **Elution order** | Reverse-phase ordering is broken: more carbons should elute later and more double bonds earlier. Cer[NS] should elute before its DHCer (the rule in the lab's Skyline notes). Each violating pair is blamed on the member that fits worse |
+| **Isobar fits RT better** | Another class or adduct has the same m/z within 5 ppm, and it matches the RT when the current annotation doesn't. Examples: PC x:y [M+H]⁺ vs PC (x−2):(y−3) [M+Na]⁺, and Cer [M+HAc−H]⁻ vs hydroxy-Cer [M−H]⁻ |
+| **BCFA isomer candidate** | The same molecular species also appears 0.3–1 carbon-equivalents earlier. That is the elution signature of monomethyl branched-chain (iso/anteiso) acyl isomers, which is the ambiguity Kolar's JLR 2024 paper addresses. Ether O-/P- pairs, labelled standards and split peaks get their own labels |
+| **Blank / QC CV** | Sample/blank ratio below 3, or pooled-QC CV above 30%. Both thresholds are settable |
+
+**RT model.** For each class it fits a robust (Huber) linear trend, RT ~ C + DB, which is the
+equivalent-carbon-number rule. Gradient boosting with an absolute-error loss then corrects the residuals.
+With boosting applied to residuals rather than to RT directly, predictions stay sensible at the edges of a
+class's carbon range, and one mis-annotated feature can't drag its neighbours. Oxidized glycerolipids and
+ether TGs get their own trend lines. Classes the run has never seen are reported but not scored.
+
+### Validation on public data
+
+There are three public reverse-phase lipidomics runs, all annotated with MS-DIAL. MTBLS5861 includes skin.
+Reports are in [`results/lipid_rt_qc`](results/lipid_rt_qc).
+
+| Run | Samples | Lipids | Classes | Median \|RT error\| (min) | R² | RT off-model | Isobar better | BCFA cand. |
+|---|---|---|---|---|---|---|---|---|
+| MTBLS5861 | 7 tissues incl. skin, CID+, MS-DIAL 5 | 2285 | 44 | 0.11 | 0.966 | 229 | 50 | 130 |
+| MTBLS14841 | mouse liver, pos, MS-DIAL 5 | 895 | 32 | 0.07 | 0.997 | 66 | 13 | 0 |
+| MTBLS14692 | C2C12 Scd1/Scd2 KO, alternating, species level | 998 | 28 | 0.22 | 0.931 | 56 | 20 | 5 |
+
+For the benchmark, 5% of annotations in each run were deliberately corrupted, three seeds per error type
+([`evaluate.py`](src/lipid_rt_qc/evaluate.py)). The score is |robust z| of the out-of-fold RT residual.
+
+| Injected error | MTBLS5861 AUC / recall | MTBLS14841 AUC / recall | MTBLS14692 AUC / recall |
+|---|---|---|---|
+| Carbons ±2 | 0.91 / 68% | 0.97 / 91% | 0.83 / 33% |
+| Double bond ±1 | 0.83 / 38% | 0.93 / 77% | 0.78 / 18% |
+| PC ↔ PE+3C (co-eluting isobar) | 0.64 / 19% | 0.77 / 37% | 0.65 / 2% |
+| [M+H]⁺ read as [M+Na]⁺ | 0.86 / 38% | 0.97 / 94% | 0.85 / 20% |
+| Wrong peak (RT swapped) | 0.98 / 94% | 0.99 / 98% | 0.95 / 78% |
+
+Flag rate on untouched features at the default threshold: MTBLS5861: 9% · MTBLS14841: 6% · MTBLS14692: 5%.
+
+Power depends on the run. MTBLS14692 annotates only sum compositions, and its RT scatter is twice as wide, so recall there is lower at the same false-positive rate. Use `lipid-rt-qc benchmark` to see what to expect on a given dataset.
+
+**What this shows.** RT alone reliably catches wrong-peak picks and chain-length or unsaturation mislabels,
+and it catches most sodium-adduct mix-ups. It can't separate PC x:y from PE (x+3):y, because they co-elute;
+that's chemistry, not a model limit, so the report says those need MS/MS head-group fragments. "Clean"
+features in public data include the depositors' own mis-annotations, so the false-positive rate is an upper bound.
+
+### Using it on the lab's data
+
+1. In MS-DIAL, export the alignment result (Height or Area) as a `.txt` file, then run `lipid-rt-qc run export.txt`.
+   Blank and QC samples are picked up from MS-DIAL's *File type* row.
+2. From Skyline, export a report with Molecule Name, Precursor Adduct, Precursor Mz, Replicate Name,
+   Retention Time and Area. Name blanks and QCs so `--blank` / `--qc` can match them.
+3. Work through `lipid_qc_flagged.csv` from the top, and check MS/MS in El-MAVEN for anything flagged as RT off-model or isobar.
 
 ---
 

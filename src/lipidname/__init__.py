@@ -139,7 +139,8 @@ def parse(name: str) -> Lipid | None:
     s = re.sub(r"\(d\d+\)|\[D\d+\]", "", s)
 
     # Estolide / FAHFA-esterified glycerolipids: 'TG 18:1_18:2_18:1;O(FA 16:0)'
-    estolide = re.search(r";O\(FA (\d+):(\d+)\)", s)
+    # ...and acyl-sphingomyelin 'SM 34:1;O2(FA 18:0)' (MS-DIAL 'ASM')
+    estolide = re.search(r";?O?\(FA (\d+):(\d+)\)", s)
     if estolide and not s.startswith(("Cer", "HexCer")):
         s = s[:estolide.start()] + s[estolide.end():]
         l = parse(s)
@@ -147,7 +148,7 @@ def parse(name: str) -> Lipid | None:
             return None
         ec, ed = int(estolide.group(1)), int(estolide.group(2))
         l.raw, l.lipid_class, l.labelled = raw, f"{l.lipid_class}_EST", labelled
-        if l.chains and sum(c for c, _ in l.chains) == l.total_c:
+        if not l.chains or sum(c for c, _ in l.chains) + (l.base[0] if l.base and l.chains else 0) == l.total_c:
             l.total_c, l.total_db = l.total_c + ec, l.total_db + ed
         l.chains = l.chains + [(ec, ed)]
         l.total_oh += 1
@@ -186,7 +187,7 @@ def parse(name: str) -> Lipid | None:
     # 'PE(P-18:0/22:6)' or 'PE P-18:0/22:6' -> plasmalogen / ether classes
     ether = re.match(r"^\(?\s*([OP])-", rest)
     lipid_class = _canon_class(cls_tok)
-    if ether and lipid_class in ("PC", "PE", "LPC", "LPE"):
+    if ether and lipid_class in ("PC", "PE", "PS", "PG", "PI", "LPC", "LPE", "TG", "DG", "MG"):
         lipid_class = f"{lipid_class}-{ether.group(1)}"
         rest = rest.replace(f"{ether.group(1)}-", "", 1)
 
