@@ -47,6 +47,7 @@ class Lipid:
     chains: list[tuple[int, int]] = field(default_factory=list)  # acyl/alkyl chains
     base: tuple[int, int] | None = None   # sphingoid base (C, DB) for sphingolipids
     adduct: str | None = None
+    labelled: bool = False      # isotope-labelled internal standard, e.g. '(d7)'
 
     @property
     def is_sphingolipid(self) -> bool:
@@ -125,7 +126,40 @@ def parse(name: str) -> Lipid | None:
     s = raw.rstrip("*").strip()
     adduct = None
 
-    # MS-DIAL: 'Cer[NS] 50:3; Cer[NS](d18:1/32:2); [M+Hac-H]-'
+    # MS-DIAL 5: 'Cer 42:1;O2|Cer 18:1;O2/24:0' (sum level | molecular species)
+    if "|" in s:
+        sum_part, detail = (x.strip() for x in s.split("|", 1))
+        l = parse(detail) or parse(sum_part)
+        if l is not None:
+            l.raw = raw
+        return l
+
+    # Isotope-labelled standards: 'DG 15:0_18:1(d7)', 'PC 15:0-18:1(d7)'
+    labelled = bool(re.search(r"\(d\d+\)|-d\d+\b|\[D\d+\]", s))
+    s = re.sub(r"\(d\d+\)|\[D\d+\]", "", s)
+
+    # Estolide / FAHFA-esterified glycerolipids: 'TG 18:1_18:2_18:1;O(FA 16:0)'
+    estolide = re.search(r";O\(FA (\d+):(\d+)\)", s)
+    if estolide and not s.startswith(("Cer", "HexCer")):
+        s = s[:estolide.start()] + s[estolide.end():]
+        l = parse(s)
+        if l is None:
+            return None
+        ec, ed = int(estolide.group(1)), int(estolide.group(2))
+        l.raw, l.lipid_class, l.labelled = raw, f"{l.lipid_class}_EST", labelled
+        if l.chains and sum(c for c, _ in l.chains) == l.total_c:
+            l.total_c, l.total_db = l.total_c + ec, l.total_db + ed
+        l.chains = l.chains + [(ec, ed)]
+        l.total_oh += 1
+        return l
+
+    # MS-DIAL 5 hydroxy / acylceramide notation -> forms the chain parser knows
+    #   'Cer 18:1;O2/24:0;(2OH)' alpha-OH, ';(3OH)' beta-OH, ';(FA 18:2)' omega-esterified
+    s = re.sub(r";\(2OH\)", ";O", s)
+    s = re.sub(r";\(3OH\)", ";OB", s)
+    s = re.sub(r";\(FA (\d+:\d+)\)", r"-O-\1", s)
+
+    # MS-DIAL 4: 'Cer[NS] 50:3; Cer[NS](d18:1/32:2); [M+Hac-H]-'
     segs = [x.strip() for x in s.split(";")] if "; " in s else [s]
     if len(segs) > 1:
         if segs[-1].startswith("["):
@@ -157,8 +191,8 @@ def parse(name: str) -> Lipid | None:
         rest = rest.replace(f"{ether.group(1)}-", "", 1)
 
     # MS-DIAL 5 / LIPID MAPS: 'Cer 18:1;O2/24:0' -> infer ceramide subclass
-    if lipid_class == "Cer":
-        lipid_class = _infer_cer_subclass(rest)
+    if lipid_class in ("Cer", "HexCer"):
+        lipid_class = lipid_class + _infer_cer_subclass(rest)[3:]
 
     chains, base, oh = _parse_chains(rest) if re.search(r"\d+:\d+.*[/_]", rest) else ([], None, 0)
 
@@ -183,15 +217,30 @@ def parse(name: str) -> Lipid | None:
         if lipid_class in ("FA", "CAR", "LPC", "LPE", "LPS", "LPI", "LPG", "LPA", "MG"):
             chains = [(total_c, total_db)]
 
-    return Lipid(raw, lipid_class, total_c, total_db, oh, chains, base, adduct)
+    if not lipid_class.startswith(("Cer", "SM", "HexCer", "Hex2Cer", "SPB")):
+        mo = re.search(r"\d+:\d+;O(\d?)(?![\w(])", s_sum) or re.search(r"\d+:\d+;O(\d?)\s*$", s)
+        if mo:
+            oh = max(oh, int(mo.group(1) or 1))
+
+    return Lipid(raw, lipid_class, total_c, total_db, oh, chains, base, adduct, labelled)
 
 
 def _infer_cer_subclass(rest: str) -> str:
-    """'18:1;O2/24:0' -> Cer_NS ; '18:0;O3/24:0' -> Cer_NP ; '18:1;O2/24:0;O' -> Cer_AS."""
-    m = re.match(r"\(?\s*(\d+):(\d+);O(\d?)\s*/\s*(\d+):(\d+)(;O\d?)?", rest)
+    """'18:1;O2/24:0' -> Cer_NS ; '18:0;O3/24:0' -> Cer_NP ; '18:1;O2/24:0;O' -> Cer_AS ;
+    '18:1;O2/30:0-O-18:2' -> Cer_EOS ; species level '42:1;O2' -> Cer_NS, '42:1;O3' -> Cer_O3
+    (ambiguous: NP, AS or ADS cannot be told apart without the chains)."""
+    m = re.match(r"\(?\s*(\d+):(\d+);O(\d?)\s*/\s*(\d+):(\d+)(;OB?\d?)?(-O-)?", rest)
     if not m:
-        return "Cer"
+        m2 = re.match(r"\(?\s*(\d+):(\d+);O(\d?)\)?\s*$", rest)
+        if not m2:
+            return "Cer"
+        db, o = int(m2.group(2)), int(m2.group(3) or 1)
+        return "Cer_O3" if o >= 3 else ("Cer_NS" if db >= 1 else "Cer_NDS")
     db, o = int(m.group(2)), int(m.group(3) or 1)
     base = "P" if o == 3 else ("S" if db >= 1 else "DS")
-    acyl = "A" if m.group(6) else "N"
+    if m.group(7):
+        return f"Cer_EO{base}"
+    acyl = "N"
+    if m.group(6):
+        acyl = "B" if "B" in m.group(6) else "A"
     return f"Cer_{acyl}{base}"
