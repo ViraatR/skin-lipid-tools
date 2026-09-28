@@ -1,0 +1,2 @@
+# Generated example outputs (reports, tables, figures): exclude from GitHub language stats
+results/** linguist-generated=true
