@@ -97,6 +97,16 @@ def test_read_msdial(msdial_file):
     assert read_any(p).source.startswith("MS-DIAL")
 
 
+def test_read_msdial_rejects_non_msdial_file(tmp_path):
+    p = tmp_path / "not_msdial.txt"
+    p.write_text("name\trt\tmz\nPC 34:1\t5.1\t760.585\n")
+    with pytest.raises(ValueError, match="Alignment ID"):
+        read_msdial(p)
+    p.write_text("Alignment ID\tMetabolite name\n1\tPC 34:1\n")
+    with pytest.raises(ValueError, match="Average Rt"):
+        read_msdial(p)
+
+
 def test_planted_errors_are_found(msdial_file):
     p, df, planted = msdial_file
     res, _ = checks.run_all(read_msdial(p))

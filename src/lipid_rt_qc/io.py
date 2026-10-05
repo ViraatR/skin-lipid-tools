@@ -45,7 +45,10 @@ def read_msdial(path: str | Path, blank_pat: str = r"blank|blk|solvent", qc_pat:
     """MS-DIAL 4/5 alignment result export (Height or Area, .txt)."""
     path = Path(path)
     raw = _read_table(path)
-    hdr_row = next(i for i in range(min(len(raw), 20)) if "Alignment ID" in raw.iloc[i].tolist())
+    hdr_row = next((i for i in range(min(len(raw), 20)) if "Alignment ID" in raw.iloc[i].tolist()), None)
+    if hdr_row is None:
+        raise ValueError(f"{path.name}: no 'Alignment ID' header in the first 20 rows; "
+                         "is this an MS-DIAL alignment export?")
     header = raw.iloc[hdr_row].tolist()
     body = raw.iloc[hdr_row + 1:].reset_index(drop=True)
     body.columns = header
@@ -73,8 +76,10 @@ def read_msdial(path: str | Path, blank_pat: str = r"blank|blk|solvent", qc_pat:
             sample_cols.append(name)
             types[name] = MSDIAL_FILE_TYPES.get(ft, _sample_type(name, blank_pat, qc_pat))
 
-    rt_col = next(c for c in header if c.startswith("Average Rt"))
-    mz_col = next(c for c in header if c.startswith("Average Mz"))
+    rt_col = next((c for c in header if c.startswith("Average Rt")), None)
+    mz_col = next((c for c in header if c.startswith("Average Mz")), None)
+    if rt_col is None or mz_col is None:
+        raise ValueError(f"{path.name}: MS-DIAL export needs 'Average Rt(min)' and 'Average Mz' columns")
     feats = pd.DataFrame({
         "feature_id": body["Alignment ID"],
         "name": body["Metabolite name"],
