@@ -53,7 +53,9 @@ def rank_enzymes(catalog: pd.DataFrame, expr: pd.DataFrame, lipid_ev: pd.DataFra
     expressed = (df["skin_log2cpm_HC"].fillna(0) >= 1) | (df["KC_nCPM"].fillna(0) >= 5)
     df["expressed_in_skin"] = expressed
     df["score"] = np.where(expressed, score, score * 0.5)
-    df["ad_direction"] = np.where(df["AD_LS_vs_HC_lfc"] > 0, "up", "down")
+    # Enzymes with no AD transcript measurement get no direction rather than "down"
+    lfc = df["AD_LS_vs_HC_lfc"]
+    df["ad_direction"] = np.select([lfc > 0, lfc < 0], ["up", "down"], default="")
     df["ad_vs_pso_lfc"] = df["AD_LS_vs_HC_lfc"] - df["PSO_LS_vs_HC_lfc"]
     df = df.sort_values("score", ascending=False)
     df.insert(0, "rank", np.arange(1, len(df) + 1))

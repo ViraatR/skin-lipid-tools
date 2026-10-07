@@ -63,3 +63,17 @@ def test_rank_prefers_consistent_evidence():
     r = rank.rank_enzymes(cat, expr, ev)
     assert r.index[0] == "GOOD"               # consistent across layers and expressed
     assert r.loc["OFF", "score"] < r.loc["GOOD", "score"]  # same evidence, not expressed in skin
+
+
+def test_rank_leaves_direction_blank_without_ad_data():
+    genes = ["UP", "DOWN", "MISSING"]
+    cat = pd.DataFrame({"serine_hydrolase": [False] * 3}, index=genes)
+    expr = pd.DataFrame({
+        "AD_LS_vs_HC_lfc": [1.0, -1.0], "AD_LS_vs_HC_q": [1e-3, 1e-3], "PSO_LS_vs_HC_lfc": [0, 0],
+        "KC_IL4_lfc": [0, 0], "KC_IL13_lfc": [0, 0], "KC_specificity": [0.5, 0.5],
+        "skin_log2cpm_HC": [5, 5], "KC_nCPM": [10, 10],
+    }, index=["UP", "DOWN"])
+    ev = pd.DataFrame({"activity_t": [np.nan] * 3}, index=genes)
+    r = rank.rank_enzymes(cat, expr, ev)
+    assert r.loc["UP", "ad_direction"] == "up" and r.loc["DOWN", "ad_direction"] == "down"
+    assert r.loc["MISSING", "ad_direction"] == ""
