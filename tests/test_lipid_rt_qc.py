@@ -164,3 +164,18 @@ def test_cli_and_report(msdial_file, tmp_path, capsys):
     assert "Retention-time model" in html and "data:image/png;base64" in html
     flagged = pd.read_csv(out / "lipid_qc_flagged.csv")
     assert {"name", "reasons"} <= set(flagged.columns)
+
+
+@pytest.mark.parametrize("extra", [["--ppm", "-5"], ["--z", "0"], ["--max-cv", "abc"]])
+def test_cli_rejects_non_positive_thresholds(msdial_file, tmp_path, extra):
+    p, _, _ = msdial_file
+    with pytest.raises(SystemExit) as e:
+        main(["run", str(p), "--out", str(tmp_path / "qc"), *extra])
+    assert e.value.code == 2
+
+
+def test_cli_reports_missing_input(tmp_path, capsys):
+    with pytest.raises(SystemExit) as e:
+        main(["run", str(tmp_path / "nope.txt")])
+    assert e.value.code == 2
+    assert "input file not found" in capsys.readouterr().err

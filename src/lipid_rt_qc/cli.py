@@ -11,6 +11,16 @@ import warnings
 from pathlib import Path
 
 
+def _positive_float(s: str) -> float:
+    try:
+        v = float(s)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"invalid number: {s!r}") from None
+    if not v > 0:
+        raise argparse.ArgumentTypeError(f"must be > 0, got {s}")
+    return v
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(prog="lipid-rt-qc", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -22,11 +32,13 @@ def main(argv=None) -> None:
         p.add_argument("--blank", default=r"blank|blk|solvent", help="regex for blank sample names")
         p.add_argument("--qc", default=r"\bqc|pool", help="regex for pooled-QC sample names")
     r = sub.choices["run"]
-    r.add_argument("--z", type=float, default=3.0, help="robust-z threshold for RT outliers")
-    r.add_argument("--ppm", type=float, default=5.0, help="m/z tolerance for isobar search")
-    r.add_argument("--blank-fold", type=float, default=3.0, help="min sample/blank ratio")
-    r.add_argument("--max-cv", type=float, default=30.0, help="max QC CV %%")
+    r.add_argument("--z", type=_positive_float, default=3.0, help="robust-z threshold for RT outliers")
+    r.add_argument("--ppm", type=_positive_float, default=5.0, help="m/z tolerance for isobar search")
+    r.add_argument("--blank-fold", type=_positive_float, default=3.0, help="min sample/blank ratio")
+    r.add_argument("--max-cv", type=_positive_float, default=30.0, help="max QC CV %%")
     a = ap.parse_args(argv)
+    if not a.input.is_file():
+        ap.error(f"input file not found: {a.input}")
 
     from .checks import run_all
     from .io import read_any
