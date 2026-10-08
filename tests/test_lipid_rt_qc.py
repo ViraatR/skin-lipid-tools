@@ -88,6 +88,34 @@ def test_formula_and_isobar_basics():
     assert ("PE", 37, 1, "[M+H]+") in hits
 
 
+# LIPID MAPS reference formulas, one per class rule family
+@pytest.mark.parametrize("cls,c,d,expected", [
+    ("PE", 34, 1, "C39H76NO8P"),
+    ("PS", 34, 1, "C40H76NO10P"),
+    ("PG", 34, 1, "C40H77O10P"),
+    ("PI", 34, 1, "C43H81O13P"),
+    ("PA", 34, 1, "C37H71O8P"),
+    ("PE-O", 34, 1, "C39H78NO7P"),  # PE O-16:0/18:1
+    ("PE-P", 34, 1, "C39H76NO7P"),  # PE P-16:0/18:1, vinyl-ether DB not counted in y
+    ("LPC", 16, 0, "C24H50NO7P"),
+    ("TG", 52, 2, "C55H102O6"),
+    ("DG", 34, 1, "C37H70O5"),
+    ("CE", 18, 1, "C45H78O2"),
+    ("FA", 16, 0, "C16H32O2"),
+    ("CAR", 16, 0, "C23H45NO4"),
+    ("SM", 34, 1, "C39H79N2O6P"),
+    ("Cer_NS", 34, 1, "C34H67NO3"),
+    ("HexCer_NS", 34, 1, "C40H77NO8"),
+])
+def test_formula_matches_reference(cls, c, d, expected):
+    assert str(formula(cls, c, d)) == expected
+
+
+def test_formula_unknown_class_or_adduct():
+    assert formula("NotAClass", 34, 1) is None
+    assert mz("PC", 34, 1, "[M+Xe]+") is None
+
+
 def test_read_msdial(msdial_file):
     p, df, _ = msdial_file
     ds = read_msdial(p)
