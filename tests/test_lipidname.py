@@ -36,6 +36,22 @@ def test_acylceramide_and_adduct():
     assert l.adduct == "[M+Hac-H]-"
 
 
+@pytest.mark.parametrize("name, cls, c, db, chains", [
+    ("DG 15:0_18:1(d7)", "DG", 33, 1, [(15, 0), (18, 1)]),
+    ("PC 15:0-18:1(d7)", "PC", 33, 1, [(15, 0), (18, 1)]),
+    ("PE 15:0-18:1-d7", "PE", 33, 1, [(15, 0), (18, 1)]),
+])
+def test_labelled_standards(name, cls, c, db, chains):
+    l = parse(name)
+    assert (l.lipid_class, l.total_c, l.total_db, l.chains, l.labelled) == (cls, c, db, chains, True)
+
+
+def test_msdial5_sum_and_species():
+    l = parse("Cer 42:1;O2|Cer 18:1;O2/24:0")
+    assert (l.lipid_class, l.total_c, l.base, l.acyl_c) == ("Cer_NS", 42, (18, 1), 24)
+    assert l.raw == "Cer 42:1;O2|Cer 18:1;O2/24:0"
+
+
 def test_ecn_and_key():
     l = parse("PC 34:1")
     assert l.ecn == 32 and l.key == "PC 34:1"

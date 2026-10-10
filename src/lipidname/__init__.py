@@ -137,6 +137,8 @@ def parse(name: str) -> Lipid | None:
     # Isotope-labelled standards: 'DG 15:0_18:1(d7)', 'PC 15:0-18:1(d7)'
     labelled = bool(re.search(r"\(d\d+\)|-d\d+\b|\[D\d+\]", s))
     s = re.sub(r"\(d\d+\)|\[D\d+\]", "", s)
+    # Avanti-style hyphenated chains 'PC 15:0-18:1' mean sn-1/sn-2
+    s = re.sub(r"(\d+:\d+)-(?=\d+:\d+)", r"\1/", s)
 
     # Estolide / FAHFA-esterified glycerolipids: 'TG 18:1_18:2_18:1;O(FA 16:0)'
     # ...and acyl-sphingomyelin 'SM 34:1;O2(FA 18:0)' (MS-DIAL 'ASM')
