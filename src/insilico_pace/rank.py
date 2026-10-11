@@ -28,6 +28,11 @@ def _pct(s: pd.Series) -> pd.Series:
 
 def rank_enzymes(catalog: pd.DataFrame, expr: pd.DataFrame, lipid_ev: pd.DataFrame,
                  linex: pd.DataFrame | None = None, weights=(0.40, 0.20, 0.30, 0.10)) -> pd.DataFrame:
+    weights = tuple(float(w) for w in weights)
+    if len(weights) != 4:
+        raise ValueError(f"weights must be (ad, th2, lipid, kc); got {len(weights)} values")
+    if any(w < 0 for w in weights) or not np.isclose(sum(weights), 1.0):
+        raise ValueError(f"weights must be non-negative and sum to 1 so the score stays in 0-1; got {weights}")
     df = catalog.join(expr, how="left").join(lipid_ev, how="left")
     if linex is not None and len(linex):
         df = df.join(linex, how="left")

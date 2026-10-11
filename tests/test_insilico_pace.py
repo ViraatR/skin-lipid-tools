@@ -77,3 +77,17 @@ def test_rank_leaves_direction_blank_without_ad_data():
     r = rank.rank_enzymes(cat, expr, ev)
     assert r.loc["UP", "ad_direction"] == "up" and r.loc["DOWN", "ad_direction"] == "down"
     assert r.loc["MISSING", "ad_direction"] == ""
+
+
+def test_rank_rejects_bad_weights():
+    import pytest
+    cat = pd.DataFrame({"serine_hydrolase": [True]}, index=["G"])
+    expr = pd.DataFrame({
+        "AD_LS_vs_HC_lfc": [1.0], "AD_LS_vs_HC_q": [1e-3], "PSO_LS_vs_HC_lfc": [0], "KC_IL4_lfc": [0],
+        "KC_IL13_lfc": [0], "KC_specificity": [0.5], "skin_log2cpm_HC": [5], "KC_nCPM": [10],
+    }, index=["G"])
+    ev = pd.DataFrame({"activity_t": [1.0]}, index=["G"])
+    for bad in [(0.5, 0.5), (0.4, 0.2, 0.3, 0.3), (1.2, -0.2, 0, 0)]:
+        with pytest.raises(ValueError, match="weights"):
+            rank.rank_enzymes(cat, expr, ev, weights=bad)
+    assert rank.rank_enzymes(cat, expr, ev, weights=[0.25] * 4)["score"].between(0, 1).all()
