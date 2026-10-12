@@ -147,6 +147,9 @@ def read_generic(path: str | Path, name_col="name", rt_col="rt", mz_col="mz", ad
     """Wide CSV: annotation columns + one numeric column per sample."""
     path = Path(path)
     df = pd.read_csv(path, sep=None, engine="python")
+    missing = [c for c in (name_col, rt_col) if c not in df]
+    if missing:
+        raise ValueError(f"{path.name}: CSV input needs {missing} column(s); got {list(df.columns)}")
     feats = pd.DataFrame({
         "name": df[name_col], "rt": pd.to_numeric(df[rt_col], errors="coerce"),
         "mz": pd.to_numeric(df[mz_col], errors="coerce") if mz_col in df else np.nan,

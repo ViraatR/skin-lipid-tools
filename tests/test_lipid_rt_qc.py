@@ -135,6 +135,18 @@ def test_read_msdial_rejects_non_msdial_file(tmp_path):
         read_msdial(p)
 
 
+def test_read_generic_csv(tmp_path):
+    p = tmp_path / "feats.csv"
+    p.write_text("name,rt,mz,QC_1,Blank_1,S1\nPC 34:1,5.1,760.585,10,1,12\n")
+    ds = read_any(p)
+    assert ds.source.startswith("CSV")
+    assert ds.features.iloc[0]["rt"] == 5.1
+    assert ds.samples["type"].to_dict() == {"QC_1": "qc", "Blank_1": "blank", "S1": "sample"}
+    p.write_text("Compound,RT\nPC 34:1,5.1\n")
+    with pytest.raises(ValueError, match="'name'"):
+        read_any(p)
+
+
 def test_planted_errors_are_found(msdial_file):
     p, df, planted = msdial_file
     res, _ = checks.run_all(read_msdial(p))
