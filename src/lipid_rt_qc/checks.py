@@ -220,7 +220,9 @@ def blank_and_qc(ds: Dataset, fold: float = 3.0, max_cv: float = 30.0, min_detec
             out["flag_low_detect"] = out["detect_rate"] < min_detect
     if blk.shape[1] and smp.shape[1]:
         out["blank_mean"] = blk.mean(axis=1)
-        out["sample_blank_ratio"] = out["sample_mean"] / out["blank_mean"].replace(0, np.nan)
+        # a feature never seen in samples has a NaN mean (e.g. Skyline replicates with no
+        # peak); treat that as 0 so blank-only contaminants are still flagged
+        out["sample_blank_ratio"] = out["sample_mean"].fillna(0) / out["blank_mean"].replace(0, np.nan)
         out["flag_blank"] = out["sample_blank_ratio"] < fold
     if qc.shape[1] >= 2:
         out["qc_cv"] = 100 * qc.std(axis=1, ddof=1) / qc.mean(axis=1)

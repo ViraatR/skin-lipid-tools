@@ -219,3 +219,15 @@ def test_cli_reports_missing_input(tmp_path, capsys):
         main(["run", str(tmp_path / "nope.txt")])
     assert e.value.code == 2
     assert "input file not found" in capsys.readouterr().err
+
+
+def test_blank_only_feature_is_flagged():
+    from lipid_rt_qc.io import Dataset
+    feats = pd.DataFrame({"name": ["PC 34:1", "PC 36:2", "PE 38:4"], "rt": [10.0, 10.5, 11.0],
+                          "mz": np.nan, "adduct": ""}, index=["a", "b", "c"])
+    inten = pd.DataFrame({"Blank_1": [100.0, 5e4, np.nan], "S1": [1e5, np.nan, 1e5], "S2": [1.2e5, np.nan, 9e4]},
+                         index=feats.index)
+    samples = pd.DataFrame({"type": ["blank", "sample", "sample"]}, index=inten.columns)
+    out = checks.blank_and_qc(Dataset(feats, inten, samples))
+    # b is only in the blank; c is never in a blank, so it has nothing to compare against
+    assert out["flag_blank"].tolist() == [False, True, False]
