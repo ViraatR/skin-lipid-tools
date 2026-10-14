@@ -214,6 +214,15 @@ def test_cli_rejects_non_positive_thresholds(msdial_file, tmp_path, extra):
     assert e.value.code == 2
 
 
+@pytest.mark.parametrize("extra", [["--blank", "blank("], ["--qc", "[qc"]])
+def test_cli_rejects_invalid_sample_regex(msdial_file, tmp_path, capsys, extra):
+    p, _, _ = msdial_file
+    with pytest.raises(SystemExit) as e:
+        main(["run", str(p), "--out", str(tmp_path / "qc"), *extra])
+    assert e.value.code == 2
+    assert "invalid regex" in capsys.readouterr().err
+
+
 def test_cli_reports_missing_input(tmp_path, capsys):
     with pytest.raises(SystemExit) as e:
         main(["run", str(tmp_path / "nope.txt")])

@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import warnings
 from pathlib import Path
 
@@ -21,6 +22,14 @@ def _positive_float(s: str) -> float:
     return v
 
 
+def _regex(s: str) -> str:
+    try:
+        re.compile(s)
+    except re.error as e:
+        raise argparse.ArgumentTypeError(f"invalid regex {s!r}: {e}") from None
+    return s
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(prog="lipid-rt-qc", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -29,8 +38,8 @@ def main(argv=None) -> None:
         p.add_argument("input", type=Path)
         p.add_argument("--out", type=Path, default=Path("lipid_qc"))
         p.add_argument("--format", default="auto", choices=["auto", "msdial", "skyline", "maf", "csv"])
-        p.add_argument("--blank", default=r"blank|blk|solvent", help="regex for blank sample names")
-        p.add_argument("--qc", default=r"\bqc|pool", help="regex for pooled-QC sample names")
+        p.add_argument("--blank", type=_regex, default=r"blank|blk|solvent", help="regex for blank sample names")
+        p.add_argument("--qc", type=_regex, default=r"\bqc|pool", help="regex for pooled-QC sample names")
     r = sub.choices["run"]
     r.add_argument("--z", type=_positive_float, default=3.0, help="robust-z threshold for RT outliers")
     r.add_argument("--ppm", type=_positive_float, default=5.0, help="m/z tolerance for isobar search")
