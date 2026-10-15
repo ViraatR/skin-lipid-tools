@@ -103,6 +103,12 @@ def mz(lipid_class: str, total_c: int, total_db: int, adduct: str) -> float | No
 def enumerate_isobars(target_mz: float, adducts: set[str], ppm: float = 10.0,
                       classes: list[str] | None = None):
     """All plausible (class, C, DB, adduct, ppm error) within `ppm` of target m/z."""
+    bad_adducts = sorted(set(adducts) - ADDUCTS.keys())
+    if bad_adducts:
+        raise ValueError(f"unknown adduct(s) {bad_adducts}; expected some of {sorted(ADDUCTS)}")
+    bad_classes = sorted(set(classes or ()) - CLASS_RULES.keys())
+    if bad_classes:
+        raise ValueError(f"no formula rule for class(es) {bad_classes}")
     out = []
     tol = target_mz * ppm / 1e6
     for cls in classes or CLASS_RULES:

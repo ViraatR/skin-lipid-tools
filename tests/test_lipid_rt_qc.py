@@ -116,6 +116,13 @@ def test_formula_unknown_class_or_adduct():
     assert mz("PC", 34, 1, "[M+Xe]+") is None
 
 
+def test_enumerate_isobars_rejects_unknown_adduct_or_class():
+    with pytest.raises(ValueError, match=r"\[M\+Xe\]\+"):
+        enumerate_isobars(760.585, {"[M+H]+", "[M+Xe]+"})
+    with pytest.raises(ValueError, match="NotAClass"):
+        enumerate_isobars(760.585, {"[M+H]+"}, classes=["PC", "NotAClass"])
+
+
 def test_read_msdial(msdial_file):
     p, df, _ = msdial_file
     ds = read_msdial(p)
