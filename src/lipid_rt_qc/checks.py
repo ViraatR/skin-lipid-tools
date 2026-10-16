@@ -129,11 +129,7 @@ def isobars(f: pd.DataFrame, rt: pd.DataFrame, model: RTModel, X: pd.DataFrame, 
         out.at[fid, "n_isobars"] = len(alts)
         if not alts:
             continue
-        cand = pd.DataFrame(alts, columns=["lipid_class", "total_c", "total_db", "adduct", "ppm"])
-        cand["total_oh"], cand["ether"] = 0, cand["lipid_class"].str.endswith(("-O", "-P")).astype(int)
-        cand["base_db"] = np.where(cand["lipid_class"].str.startswith(("Cer", "SM", "HexCer")),
-                                   np.where(cand["lipid_class"].str.contains("DS"), 0, 1), -1)
-        cand["n_chains"] = cand["lipid_class"].map(expected_chains)
+        cand = _alt_features(pd.DataFrame(alts, columns=["lipid_class", "total_c", "total_db", "adduct", "ppm"]), X)
         cand["rt_pred"] = model.predict(cand)
         cand["z"] = (r["rt"] - cand["rt_pred"]) / (resid_sd or 1)
         cand = cand.sort_values(by="z", key=abs)
@@ -148,6 +144,28 @@ def isobars(f: pd.DataFrame, rt: pd.DataFrame, model: RTModel, X: pd.DataFrame, 
     out["flag_isobar_rt"] = (cur_z > 3) & (alt_z < 1.5)
     out["n_isobars"] = pd.to_numeric(out["n_isobars"], errors="coerce").fillna(0).astype(int)
     return out
+
+
+def _alt_features(cand: pd.DataFrame, X: pd.DataFrame) -> pd.DataFrame:
+    """Fill the RT-model features an alternative annotation would have.
+
+    Classes seen in the run take the typical OH / ether / base-DB / chain values of
+    their own annotated features, so e.g. a Cer_NP alternative gets the phyto base
+    (no base double bond, extra OH) the model was trained on. Unseen classes fall
+    back to rules derived from the class name.
+    """
+    cand = cand.copy()
+    cols = ["total_oh", "ether", "base_db", "n_chains"]
+    cand["total_oh"] = 0
+    cand["ether"] = cand["lipid_class"].str.endswith(("-O", "-P")).astype(int)
+    cand["base_db"] = np.where(cand["lipid_class"].str.startswith(("Cer", "SM", "HexCer")),
+                               np.where(cand["lipid_class"].str.contains("DS"), 0, 1), -1)
+    cand["n_chains"] = cand["lipid_class"].map(expected_chains)
+    typical = X.groupby("lipid_class")[cols].agg(lambda v: v.mode().iloc[0])
+    seen = cand["lipid_class"].isin(typical.index)
+    if seen.any():
+        cand.loc[seen, cols] = typical.loc[cand.loc[seen, "lipid_class"], cols].to_numpy()
+    return cand
 
 
 # ------------------------------------------------------------------ 4. duplicates / BCFA

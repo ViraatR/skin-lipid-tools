@@ -257,3 +257,15 @@ def test_blank_only_feature_is_flagged():
 ])
 def test_expected_chains_counts_estolide_fa_once(name, n):
     assert expected_chains(parse(name).lipid_class) == n
+
+
+def test_isobar_alternatives_use_class_features_from_the_run():
+    X = pd.DataFrame({
+        "lipid_class": ["Cer_NP", "Cer_NP", "PC"], "total_c": [42, 40, 34], "total_db": [0, 0, 1],
+        "total_oh": [1, 1, 0], "ether": [0, 0, 0], "base_db": [0, 0, -1], "n_chains": [2, 2, 2],
+    })
+    cand = pd.DataFrame({"lipid_class": ["Cer_NP", "Cer_NS"], "total_c": [44, 44], "total_db": [0, 1],
+                         "adduct": ["[M+H]+"] * 2, "ppm": [0.0, 0.0]})
+    out = checks._alt_features(cand, X).set_index("lipid_class")
+    assert (out.loc["Cer_NP", ["total_oh", "base_db"]] == [1, 0]).all()  # learnt from the run
+    assert (out.loc["Cer_NS", ["total_oh", "base_db", "n_chains"]] == [0, 1, 2]).all()  # name-based fallback
