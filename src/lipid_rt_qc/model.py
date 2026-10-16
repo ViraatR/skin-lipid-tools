@@ -27,8 +27,11 @@ FEATURES = ["cls_code", "total_c", "total_db", "total_oh", "ether", "base_db", "
 def expected_chains(cls: str) -> int:
     """Chains implied by the class (independent of how detailed the name is)."""
     cls = cls.split(";")[0]
-    if cls.startswith("Cer_EO") or cls in ("TG",) or cls.endswith("_EST"):
-        return 3 + cls.endswith("_EST")
+    if cls.endswith("_EST"):
+        # estolide / acyl-SM: the parent's chains plus the esterified FA
+        return expected_chains(cls[:-len("_EST")]) + 1
+    if cls.startswith("Cer_EO") or cls in ("TG",):
+        return 3
     if cls in ("CL",):
         return 4
     if cls.startswith(("L", "FA", "CAR", "CE", "MG", "NA", "SPB", "ST", "BA", "VAE")) and not cls.startswith("LacCer"):

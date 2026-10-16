@@ -8,6 +8,8 @@ from lipid_rt_qc import checks, report
 from lipid_rt_qc.cli import main
 from lipid_rt_qc.io import read_any, read_msdial, read_skyline
 from lipid_rt_qc.masses import enumerate_isobars, formula, mz
+from lipid_rt_qc.model import expected_chains
+from lipidname import parse
 
 # Reverse-phase-like RT: rises with carbons, falls with double bonds, class offset
 OFFSET = {"PC": 0.0, "PE": 0.3, "TG": 5.0, "Cer_NS": 1.0, "Cer_NDS": 1.25, "LPC": -6.0}
@@ -247,3 +249,11 @@ def test_blank_only_feature_is_flagged():
     out = checks.blank_and_qc(Dataset(feats, inten, samples))
     # b is only in the blank; c is never in a blank, so it has nothing to compare against
     assert out["flag_blank"].tolist() == [False, True, False]
+
+
+@pytest.mark.parametrize("name,n", [
+    ("TG 18:1_18:2_18:1;O(FA 16:0)", 4), ("DG 16:0_18:1;O(FA 18:0)", 3),
+    ("SM 34:1;O2(FA 18:0)", 3), ("TG 52:2", 3), ("PC 34:1", 2), ("LPC 18:1", 1),
+])
+def test_expected_chains_counts_estolide_fa_once(name, n):
+    assert expected_chains(parse(name).lipid_class) == n
