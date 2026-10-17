@@ -259,6 +259,14 @@ def test_expected_chains_counts_estolide_fa_once(name, n):
     assert expected_chains(parse(name).lipid_class) == n
 
 
+@pytest.mark.parametrize("name,n", [
+    ("FAHFA 38:5; FAHFA(20:4/18:1); [M-H]-", 2), ("MLCL 52:2", 3), ("CL 72:8", 4),
+    ("NAPE 52:4", 3), ("NAE 20:4", 1), ("MGDG 34:3", 2), ("MG 18:1", 1),
+])
+def test_expected_chains_for_classes_with_misleading_prefixes(name, n):
+    assert expected_chains(parse(name).lipid_class) == n
+
+
 def test_isobar_alternatives_use_class_features_from_the_run():
     X = pd.DataFrame({
         "lipid_class": ["Cer_NP", "Cer_NP", "PC"], "total_c": [42, 40, 34], "total_db": [0, 0, 1],

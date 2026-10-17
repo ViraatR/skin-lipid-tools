@@ -24,16 +24,24 @@ from lipidname import Lipid
 FEATURES = ["cls_code", "total_c", "total_db", "total_oh", "ether", "base_db", "n_chains"]
 
 
+# Classes whose chain count the prefix rules below would get wrong
+# (e.g. FAHFA starts with "FA", NAPE with "NA", MGDG with "MG").
+_CHAIN_COUNTS = {
+    "CL": 4, "MLCL": 3, "DLCL": 2, "NAPE": 3, "LNAPE": 2,
+    "FAHFA": 2, "MGDG": 2, "DGDG": 2, "SQDG": 2,
+}
+
+
 def expected_chains(cls: str) -> int:
     """Chains implied by the class (independent of how detailed the name is)."""
     cls = cls.split(";")[0]
     if cls.endswith("_EST"):
         # estolide / acyl-SM: the parent's chains plus the esterified FA
         return expected_chains(cls[:-len("_EST")]) + 1
+    if cls in _CHAIN_COUNTS:
+        return _CHAIN_COUNTS[cls]
     if cls.startswith("Cer_EO") or cls in ("TG",):
         return 3
-    if cls in ("CL",):
-        return 4
     if cls.startswith(("L", "FA", "CAR", "CE", "MG", "NA", "SPB", "ST", "BA", "VAE")) and not cls.startswith("LacCer"):
         return 1
     return 2
