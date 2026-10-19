@@ -26,12 +26,14 @@ def _png(fig) -> str:
     return base64.b64encode(buf.getvalue()).decode()
 
 
-def figures(res: pd.DataFrame) -> dict[str, str]:
+def figures(res: pd.DataFrame, params: dict | None = None) -> dict[str, str]:
+    """Report figures; threshold lines follow the run's own --max-cv / --blank-fold."""
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
+    params = params or {}
     out = {}
     a = res[res["annotated"] & res["rt_pred"].notna()]
     top = a["lipid_class"].value_counts().index[:10]
@@ -67,12 +69,12 @@ def figures(res: pd.DataFrame) -> dict[str, str]:
         fig, axes = plt.subplots(1, 2, figsize=(9, 3.5))
         if "qc_cv" in res:
             axes[0].hist(res["qc_cv"].dropna().clip(upper=100), bins=40, color="#4a6fa5")
-            axes[0].axvline(30, color="r", ls="--")
+            axes[0].axvline(params.get("max_cv", 30.0), color="r", ls="--")
             axes[0].set(xlabel="QC CV %", title="QC precision")
         if "sample_blank_ratio" in res:
             v = np.log10(res["sample_blank_ratio"].replace([np.inf, 0], np.nan).dropna())
             axes[1].hist(v.clip(-1, 4), bins=40, color="#4a6fa5")
-            axes[1].axvline(np.log10(3), color="r", ls="--")
+            axes[1].axvline(np.log10(params.get("blank_fold", 3.0)), color="r", ls="--")
             axes[1].set(xlabel="log10 sample / blank", title="Blank contribution")
         out["qc"] = _png(fig)
         plt.close(fig)
@@ -92,7 +94,8 @@ def write(res: pd.DataFrame, out_dir: str | Path, source: str = "", params: dict
     flagged = flagged.sort_values(["n_flags", "rt_z"], key=lambda s: s.abs() if s.name == "rt_z" else s, ascending=False)
     flagged[cols].to_csv(out_dir / "lipid_qc_flagged.csv")
 
-    figs = figures(res)
+    figs = figures(res, params)
+    z = (params or {}).get("z", 3.0)
     counts = res[flags].sum().rename(FLAG_TEXT)
     a = res[res["annotated"]]
     summary = pd.DataFrame({
@@ -121,7 +124,7 @@ th{{background:#f4f6f8;position:sticky;top:0}} .wrap{{overflow-x:auto}} .muted{{
 <div class="wrap">{table.to_html(na_rep="", escape=True)}</div>
 <h2>How to read this</h2>
 <ul>
-<li><b>RT off-model</b>: observed RT is &gt;3 robust SD (and &gt;0.2 min) from what this run's own lipids predict for that class/C/DB. Check the peak and MS/MS.</li>
+<li><b>RT off-model</b>: observed RT is &gt;{z:g} robust SD (and &gt;0.2 min) from what this run's own lipids predict for that class/C/DB. Check the peak and MS/MS.</li>
 <li><b>Elution order</b>: within a class, more carbons should elute later and more double bonds earlier (reverse phase); Cer should elute before its DHCer. The feature that fits worse is blamed.</li>
 <li><b>Isobar fits RT better</b>: another class/adduct with the same m/z (e.g. [M+Na]<sup>+</sup> vs [M+H]<sup>+</sup>, Cer [M+HAc-H]<sup>-</sup> vs hydroxy-Cer [M-H]<sup>-</sup>) matches the observed RT; the current annotation does not.</li>
 <li><b>BCFA isomer candidate</b>: the same annotation also appears ~0.3-1 carbon-equivalents earlier, the elution signature of monomethyl branched-chain (iso/anteiso) acyl isomers.</li>

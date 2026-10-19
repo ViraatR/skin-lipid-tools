@@ -215,6 +215,22 @@ def test_cli_and_report(msdial_file, tmp_path, capsys):
     assert {"name", "reasons"} <= set(flagged.columns)
 
 
+
+def test_report_uses_cli_thresholds(msdial_file, tmp_path, monkeypatch):
+    p, _, _ = msdial_file
+    seen = {}
+    orig = report.figures
+
+    def spy(res, params=None):
+        seen.update(params or {})
+        return orig(res, params)
+
+    monkeypatch.setattr(report, "figures", spy)
+    out = tmp_path / "qc"
+    main(["run", str(p), "--out", str(out), "--z", "4.5", "--max-cv", "20", "--blank-fold", "5"])
+    assert seen["max_cv"] == 20 and seen["blank_fold"] == 5
+    assert "&gt;4.5 robust SD" in (out / "lipid_qc_report.html").read_text()
+
 @pytest.mark.parametrize("extra", [["--ppm", "-5"], ["--z", "0"], ["--max-cv", "abc"]])
 def test_cli_rejects_non_positive_thresholds(msdial_file, tmp_path, extra):
     p, _, _ = msdial_file
