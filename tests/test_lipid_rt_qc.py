@@ -293,3 +293,22 @@ def test_isobar_alternatives_use_class_features_from_the_run():
     out = checks._alt_features(cand, X).set_index("lipid_class")
     assert (out.loc["Cer_NP", ["total_oh", "base_db"]] == [1, 0]).all()  # learnt from the run
     assert (out.loc["Cer_NS", ["total_oh", "base_db", "n_chains"]] == [0, 1, 2]).all()  # name-based fallback
+
+
+
+def test_isobar_flag_follows_z_threshold():
+    # PC 34:1 [M+H]+ is off its RT trend (z = 4); the PE 37:1 isobar fits exactly
+    f = pd.DataFrame({"name": ["PC 34:1"], "rt": [10.0], "mz": [mz("PC", 34, 1, "[M+H]+")], "adduct": ["[M+H]+"]},
+                     index=["a"])
+    f["lipid"] = f["name"].map(parse)
+    rt = pd.DataFrame({"rt_resid": [2.0], "rt_z": [4.0]}, index=f.index)
+    X = pd.DataFrame({"lipid_class": ["PC", "PE"], "total_c": [34, 36], "total_db": [1, 1], "total_oh": [0, 0],
+                      "ether": [0, 0], "base_db": [-1, -1], "n_chains": [2, 2]})
+
+    class AltFitsRT:
+        def predict(self, cand):
+            return np.full(len(cand), 10.0)
+
+    flag = lambda z: checks.isobars(f, rt, AltFitsRT(), X, z_thresh=z).at["a", "flag_isobar_rt"]
+    assert flag(3.0)
+    assert not flag(5.0)

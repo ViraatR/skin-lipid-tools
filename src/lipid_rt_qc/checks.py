@@ -109,7 +109,7 @@ def _polarity(adduct: str) -> set[str]:
 
 
 def isobars(f: pd.DataFrame, rt: pd.DataFrame, model: RTModel, X: pd.DataFrame, ppm: float = 5.0,
-            classes_seen_only: bool = True) -> pd.DataFrame:
+            classes_seen_only: bool = True, z_thresh: float = 3.0) -> pd.DataFrame:
     """Alternative annotations within `ppm`; score each alternative with the RT model."""
     from .masses import CLASS_RULES
     classes = sorted(c for c in X["lipid_class"].unique() if c in CLASS_RULES) if classes_seen_only else None
@@ -141,7 +141,7 @@ def isobars(f: pd.DataFrame, rt: pd.DataFrame, model: RTModel, X: pd.DataFrame, 
     cur_z = rt["rt_z"].abs()
     alt_z = pd.to_numeric(out["best_alt_z"], errors="coerce").abs()
     # flag when the current annotation fits RT poorly and an isobar fits well
-    out["flag_isobar_rt"] = (cur_z > 3) & (alt_z < 1.5)
+    out["flag_isobar_rt"] = (cur_z > z_thresh) & (alt_z < 1.5)
     out["n_isobars"] = pd.to_numeric(out["n_isobars"], errors="coerce").fillna(0).astype(int)
     return out
 
@@ -252,7 +252,7 @@ def run_all(ds: Dataset, z_thresh: float = 3.0, ppm: float = 5.0, blank_fold: fl
             max_cv: float = 30.0) -> tuple[pd.DataFrame, RTModel]:
     f = annotate(ds)
     rt, model, X = rt_outliers(f, z_thresh)
-    parts = [f.drop(columns=["lipid"]), rt, elution_order(f, rt), isobars(f, rt, model, X, ppm),
+    parts = [f.drop(columns=["lipid"]), rt, elution_order(f, rt), isobars(f, rt, model, X, ppm, z_thresh=z_thresh),
              duplicates(f, rt, X, model), blank_and_qc(ds, blank_fold, max_cv)]
     res = pd.concat(parts, axis=1)
     flags = [c for c in res if c.startswith("flag_")]
