@@ -156,6 +156,15 @@ def test_read_generic_csv(tmp_path):
         read_any(p)
 
 
+@pytest.mark.parametrize("names", [["foo"], ["PC 34:1", "foo"]])
+def test_rt_model_needs_two_annotated_features(tmp_path, names):
+    p = tmp_path / "feats.csv"
+    p.write_text("name,rt,mz\n" + "".join(f"{n},5.1,760.585\n" for n in names))
+    f = checks.annotate(read_any(p))
+    with pytest.raises(ValueError, match="at least 2 features"):
+        checks.rt_outliers(f)
+
+
 def test_planted_errors_are_found(msdial_file):
     p, df, planted = msdial_file
     res, _ = checks.run_all(read_msdial(p))

@@ -65,7 +65,8 @@ def lipid_features(lipids: pd.Series) -> pd.DataFrame:
             "total_oh": l.total_oh, "ether": int(l.lipid_class.endswith(("-O", "-P"))),
             "base_db": l.base[1] if l.base else -1, "n_chains": expected_chains(l.lipid_class),
         })
-    return pd.DataFrame(rows).set_index("feature_id")
+    cols = ["feature_id", "lipid_class", "total_c", "total_db", "total_oh", "ether", "base_db", "n_chains"]
+    return pd.DataFrame(rows, columns=cols).set_index("feature_id")
 
 
 class _CenteredHuber:

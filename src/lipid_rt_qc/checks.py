@@ -39,6 +39,8 @@ def annotate(ds: Dataset) -> pd.DataFrame:
 def rt_outliers(f: pd.DataFrame, z_thresh: float = 3.0, min_dt: float = 0.2, model: RTModel | None = None):
     X = lipid_features(f["lipid"].dropna())
     X = X[f.loc[X.index, "rt"].notna()]
+    if len(X) < 2:
+        raise ValueError(f"RT model needs at least 2 features with a parseable lipid name and an RT; got {len(X)}")
     y = f.loc[X.index, "rt"]
     model = model or RTModel()
     pred = pd.Series(model.oof_predict(X, y), index=X.index)
