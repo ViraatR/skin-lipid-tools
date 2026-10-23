@@ -18,6 +18,17 @@ def test_contrast_direction():
     assert r.loc["up", "lfc"] > 3 and abs(r.loc["flat", "lfc"]) < 0.2
 
 
+def test_contrast_rejects_unusable_groups():
+    import pytest
+    x = pd.DataFrame({"a1": [1.0], "a2": [2.0], "b1": [1.0], "b2": [1.5], "b3": [1.2]}, index=["g"])
+    with pytest.raises(ValueError, match="not in data"):
+        contrast(x, ["a1", "a9"], ["b1", "b2"])
+    with pytest.raises(ValueError, match=">=2 samples"):
+        contrast(x, [], ["b1", "b2"])
+    with pytest.raises(ValueError, match="equal group sizes"):
+        contrast(x, ["a1", "a2"], ["b1", "b2", "b3"], paired=True)
+
+
 def _toy_lipidome():
     names = ["Cer[NS] 42:1; Cer[NS](d18:1/24:0); [M-H]-", "Cer[NS] 34:1; Cer[NS](d18:1/16:0); [M-H]-",
              "SM 34:1; SM(d18:1/16:0); [M-H]-"]

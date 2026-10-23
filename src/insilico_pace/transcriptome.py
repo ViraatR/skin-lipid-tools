@@ -39,6 +39,15 @@ def bh(p: np.ndarray) -> np.ndarray:
 
 def contrast(x: pd.DataFrame, a: list[str], b: list[str], paired: bool = False, name: str = "") -> pd.DataFrame:
     """log2FC (a - b), t-test p and BH q for every row of x (genes x samples, log scale)."""
+    missing = [c for c in (*a, *b) if c not in x.columns]
+    if missing:
+        raise ValueError(f"contrast {name or '(unnamed)'}: samples not in data: {missing}")
+    if len(a) < 2 or len(b) < 2:
+        raise ValueError(f"contrast {name or '(unnamed)'}: need >=2 samples per group for a t-test; "
+                         f"got {len(a)} vs {len(b)}")
+    if paired and len(a) != len(b):
+        raise ValueError(f"contrast {name or '(unnamed)'}: paired test needs equal group sizes; "
+                         f"got {len(a)} vs {len(b)}")
     xa, xb = x[a].to_numpy(float), x[b].to_numpy(float)
     if paired:
         t, p = stats.ttest_rel(xa, xb, axis=1)
