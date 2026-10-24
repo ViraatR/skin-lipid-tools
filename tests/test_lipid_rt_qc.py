@@ -156,6 +156,24 @@ def test_read_generic_csv(tmp_path):
         read_any(p)
 
 
+def test_read_maf(tmp_path):
+    p = tmp_path / "m_lipids.tsv"
+    cols = ["metabolite_identification", "mass_to_charge", "retention_time", "modifications",
+            "smallmolecule_abundance_sub", "smallmolecule_abundance_std_error_sub", "S1", "QC_1", "Blank_1"]
+    rows = [["PC 34:1", "760.585", "306", "[M+H]+", "", "", "100", "90", ""],
+            ["TG 52:2", "876.802", "870", "unknown", "", "", "50", "45", "2"]]
+    p.write_text("\n".join("\t".join(r) for r in [cols, *rows]) + "\n")
+    ds = read_any(p)
+    assert ds.source.startswith("MetaboLights MAF")
+    # retention times submitted in seconds are converted to minutes
+    assert ds.features["rt"].tolist() == pytest.approx([5.1, 14.5])
+    # only adduct-shaped modifications are kept
+    assert ds.features["adduct"].tolist() == ["[M+H]+", ""]
+    # sample columns are the ones after the smallmolecule_abundance block
+    assert ds.samples["type"].to_dict() == {"S1": "sample", "QC_1": "qc", "Blank_1": "blank"}
+    assert np.isnan(ds.intensity.iloc[0]["Blank_1"])
+
+
 @pytest.mark.parametrize("names", [["foo"], ["PC 34:1", "foo"]])
 def test_rt_model_needs_two_annotated_features(tmp_path, names):
     p = tmp_path / "feats.csv"
