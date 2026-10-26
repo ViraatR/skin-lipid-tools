@@ -339,3 +339,41 @@ def test_isobar_flag_follows_z_threshold():
     flag = lambda z: checks.isobars(f, rt, AltFitsRT(), X, z_thresh=z).at["a", "flag_isobar_rt"]
     assert flag(3.0)
     assert not flag(5.0)
+
+
+@pytest.mark.parametrize("kind", ["carbon_pm2", "db_pm1", "class_isobar", "wrong_peak"])
+def test_inject_mutates_only_the_reported_features(msdial_file, kind):
+    from lipid_rt_qc.evaluate import inject
+
+    p, _, _ = msdial_file
+    ds = read_msdial(p)
+    before = ds.features.copy()
+    bad, hit = inject(ds, kind, frac=0.05, seed=0)
+    pd.testing.assert_frame_equal(ds.features, before)   # input left untouched
+    assert len(hit) >= 5
+    changed = bad.features.index[(bad.features[["name", "rt"]] != before[["name", "rt"]]).any(axis=1)]
+    assert set(changed) == set(hit)
+    for fid in hit:
+        old, new = parse(before.at[fid, "name"]), parse(bad.features.at[fid, "name"])
+        if kind == "wrong_peak":
+            assert new == old and abs(bad.features.at[fid, "rt"] - before.at[fid, "rt"]) >= 0.5
+        elif kind == "carbon_pm2":
+            assert (new.lipid_class, abs(new.total_c - old.total_c), new.total_db) == (old.lipid_class, 2, old.total_db)
+        elif kind == "db_pm1":
+            assert (new.lipid_class, new.total_c, abs(new.total_db - old.total_db)) == (old.lipid_class, old.total_c, 1)
+        else:
+            assert {old.lipid_class, new.lipid_class} == {"PC", "PE"} and abs(new.total_c - old.total_c) == 3
+    again, hit2 = inject(ds, kind, frac=0.05, seed=0)
+    assert list(hit2) == list(hit)                        # same seed, same errors
+
+
+def test_benchmark_detects_wrong_peaks(msdial_file):
+    from lipid_rt_qc.evaluate import benchmark, summarise
+
+    p, _, _ = msdial_file
+    b = benchmark(read_msdial(p), kinds=["wrong_peak", "carbon_pm2"], seeds=(0,))
+    s = summarise(b)
+    assert list(s.index) == ["carbon_pm2", "wrong_peak"]   # reported in KINDS order
+    assert s.loc["wrong_peak", "auc"] > 0.9
+    assert s.loc["wrong_peak", "recall"] > 0.5
+    assert s.loc["wrong_peak", "fpr_clean"] < 0.1
