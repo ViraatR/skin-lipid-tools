@@ -50,11 +50,14 @@ def _get(url: str, dest: Path, timeout: int = 600) -> Path:
     if dest.exists() and dest.stat().st_size > 1000:
         return dest
     print(f"  fetching {url}")
+    # Stream to a temp file so an interrupted download isn't mistaken for a cached one
+    part = dest.with_name(dest.name + ".part")
     with requests.get(url, stream=True, timeout=timeout) as r:
         r.raise_for_status()
-        with open(dest, "wb") as fh:
+        with open(part, "wb") as fh:
             for chunk in r.iter_content(1 << 20):
                 fh.write(chunk)
+    part.replace(dest)
     return dest
 
 
@@ -101,6 +104,7 @@ def download() -> None:
         fdest = RAW / "mwb" / f"{st}_factors.json"
         if not fdest.exists():
             r = requests.get(f"https://www.metabolomicsworkbench.org/rest/study/study_id/{st}/factors", timeout=600)
+            r.raise_for_status()
             fdest.write_text(r.text)
     print("done")
 
