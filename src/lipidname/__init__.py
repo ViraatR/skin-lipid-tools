@@ -33,6 +33,12 @@ CLASS_ALIASES = {
     "FFA": "FA", "SPH": "SPB", "SO": "SPB", "SA": "SPB",
 }
 
+# Classes with exactly one acyl/alkyl chain, so 'CE 18:2' or 'LPC O-16:0' already names it
+SINGLE_CHAIN_CLASSES = {
+    "FA", "CAR", "CE", "MG", "LPC", "LPE", "LPS", "LPI", "LPG", "LPA",
+    "LPC-O", "LPE-O", "LPC-P", "LPE-P",
+}
+
 CHAIN_RE = re.compile(r"(?:(?P<prefix>[dtmOP])-?)?(?P<c>\d{1,2}):(?P<db>\d{1,2})(?:;(?:O(?P<o>\d?)|(?P<o2>\d)O))?")
 SUM_RE = re.compile(r"^(?P<c>\d{1,3}):(?P<db>\d{1,2})(?:;(?:O(?P<o>\d?)|(?P<o2>\d)O))?")
 
@@ -216,9 +222,9 @@ def parse(name: str) -> Lipid | None:
         # Species-level only: assume d18:x base for acyl-length math
         base = (18, 1 if not lipid_class.endswith(("DS", "P")) else 0)
 
-    if lipid_class in ("TG", "DG", "MG", "FA", "CAR", "LPC", "LPE", "LPS", "LPI", "LPG", "LPA") and not chains:
-        if lipid_class in ("FA", "CAR", "LPC", "LPE", "LPS", "LPI", "LPG", "LPA", "MG"):
-            chains = [(total_c, total_db)]
+    # Single-chain classes: the sum composition is the chain
+    if lipid_class in SINGLE_CHAIN_CLASSES and not chains:
+        chains = [(total_c, total_db)]
 
     if not lipid_class.startswith(("Cer", "SM", "HexCer", "Hex2Cer", "SPB")):
         mo = re.search(r"\d+:\d+;O(\d?)(?![\w(])", s_sum) or re.search(r"\d+:\d+;O(\d?)\s*$", s)

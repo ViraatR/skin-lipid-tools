@@ -24,6 +24,10 @@ def test_sphingolipids(name, cls, c, db, acyl):
     ("20:1 Cholesteryl ester; [M+NH4]+", "CE", 20, 1, [(20, 1)]),
     ("TG 56:8; TG(16:1/18:1/22:6); [M+NH4]+", "TG", 56, 8, [(16, 1), (18, 1), (22, 6)]),
     ("FA(23:0)", "FA", 23, 0, [(23, 0)]),
+    ("CE 18:2", "CE", 18, 2, [(18, 2)]),
+    ("20:1 Cholesteryl ester", "CE", 20, 1, [(20, 1)]),
+    ("LPC O-16:0", "LPC-O", 16, 0, [(16, 0)]),
+    ("LPE P-18:0", "LPE-P", 18, 0, [(18, 0)]),
 ])
 def test_glycerolipids(name, cls, c, db, chains):
     l = parse(name)
