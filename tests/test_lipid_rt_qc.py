@@ -172,6 +172,9 @@ def test_read_maf(tmp_path):
     # sample columns are the ones after the smallmolecule_abundance block
     assert ds.samples["type"].to_dict() == {"S1": "sample", "QC_1": "qc", "Blank_1": "blank"}
     assert np.isnan(ds.intensity.iloc[0]["Blank_1"])
+    p.write_text("metabolite_identification\tmass_to_charge\tS1\nPC 34:1\t760.585\t100\n")
+    with pytest.raises(ValueError, match="'retention_time'"):
+        read_any(p)
 
 
 @pytest.mark.parametrize("names", [["foo"], ["PC 34:1", "foo"]])

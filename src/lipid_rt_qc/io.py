@@ -170,6 +170,9 @@ def read_maf(path: str | Path, blank_pat: str = r"blank|blk|solvent", qc_pat: st
     `smallmolecule_abundance_*` block; the adduct is usually in `modifications`."""
     path = Path(path)
     df = pd.read_csv(path, sep="\t", dtype=str, keep_default_na=False)
+    missing = [c for c in ("metabolite_identification", "retention_time", "mass_to_charge") if c not in df]
+    if missing:
+        raise ValueError(f"{path.name}: MetaboLights MAF needs {missing} column(s); got {list(df.columns)}")
     adduct = pd.Series("", index=df.index)
     for col in ("modifications", "fragmentation", "adduct"):
         if col in df:
