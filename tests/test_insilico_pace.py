@@ -102,3 +102,20 @@ def test_rank_rejects_bad_weights():
         with pytest.raises(ValueError, match="weights"):
             rank.rank_enzymes(cat, expr, ev, weights=bad)
     assert rank.rank_enzymes(cat, expr, ev, weights=[0.25] * 4)["score"].between(0, 1).all()
+
+
+def test_control_recovery_percentiles_and_p():
+    controls = list(rank.POSITIVE_CONTROLS)
+    genes = controls + [f"G{i}" for i in range(24)]
+    n = len(genes)
+    ranked = pd.DataFrame({
+        "rank": np.arange(1, n + 1), "score": np.linspace(1, 0, n), "AD_LS_vs_HC_lfc": 0.0,
+        "th2_lfc": 0.0, "lipid_proxy": "", "activity_t": np.nan,
+    }, index=genes)
+    ctl, p = rank.control_recovery(ranked)
+    assert set(ctl.index) == set(controls)
+    assert ctl.loc[controls[0], "percentile"] == 100       # rank 1 of n
+    assert np.isclose(ctl.loc[controls[-1], "percentile"], 100 * (1 - (len(controls) - 1) / n))
+    assert p < 0.001                                       # all controls outrank every other enzyme
+    _, p_bottom = rank.control_recovery(ranked.assign(score=np.linspace(0, 1, n)))
+    assert p_bottom > 0.99
