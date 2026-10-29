@@ -99,7 +99,16 @@ def test_formula_and_isobar_basics():
     ("PA", 34, 1, "C37H71O8P"),
     ("PE-O", 34, 1, "C39H78NO7P"),  # PE O-16:0/18:1
     ("PE-P", 34, 1, "C39H76NO7P"),  # PE P-16:0/18:1, vinyl-ether DB not counted in y
+    ("PC-O", 34, 1, "C42H84NO7P"),  # PC O-16:0/18:1
+    ("PC-P", 34, 1, "C42H82NO7P"),  # PC P-16:0/18:1
+    ("BMP", 36, 2, "C42H79O10P"),  # BMP 18:1/18:1, isomeric with PG
     ("LPC", 16, 0, "C24H50NO7P"),
+    ("LPE", 18, 0, "C23H48NO7P"),
+    ("LPS", 18, 0, "C24H48NO9P"),
+    ("LPG", 16, 0, "C22H45O9P"),
+    ("LPI", 18, 0, "C27H53O12P"),
+    ("LPA", 16, 0, "C19H39O7P"),
+    ("MG", 18, 1, "C21H40O4"),
     ("TG", 52, 2, "C55H102O6"),
     ("DG", 34, 1, "C37H70O5"),
     ("CE", 18, 1, "C45H78O2"),
@@ -107,6 +116,10 @@ def test_formula_and_isobar_basics():
     ("CAR", 16, 0, "C23H45NO4"),
     ("SM", 34, 1, "C39H79N2O6P"),
     ("Cer_NS", 34, 1, "C34H67NO3"),
+    ("Cer_NP", 42, 0, "C42H85NO4"),  # Cer t18:0/24:0
+    ("Cer_AS", 34, 1, "C34H67NO4"),  # Cer d18:1/16:0(2OH)
+    ("Cer_AP", 42, 0, "C42H85NO5"),  # Cer t18:0/24:0(2OH)
+    ("Cer_EOS", 68, 3, "C68H129NO5"),  # Cer d18:1/32:0-O-18:2, the esterified FA counts in T/D
     ("HexCer_NS", 34, 1, "C40H77NO8"),
 ])
 def test_formula_matches_reference(cls, c, d, expected):
