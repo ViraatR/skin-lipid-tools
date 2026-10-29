@@ -193,7 +193,10 @@ def enzyme_lipid_evidence(effects: pd.DataFrame) -> pd.DataFrame:
             for g in filter(None, genes.split(",")):
                 rows.append({"gene": g, "proxy": proxy, "activity_t": sign * r["t"], "q": r["q"],
                              "activity_lfc": sign * r["lfc_spade"]})
-    ev = pd.DataFrame(rows)
+    ev = pd.DataFrame(rows, columns=["gene", "proxy", "activity_t", "q", "activity_lfc"])
+    # drop proxies that could not be estimated, so an enzyme mapped only to
+    # those ends up with no lipid evidence instead of crashing idxmax
+    ev = ev[ev["activity_t"].notna()]
     # keep the strongest proxy per enzyme
     ev = ev.loc[ev.groupby("gene")["activity_t"].apply(lambda s: s.abs().idxmax())]
     return ev.set_index("gene").rename(columns={"proxy": "lipid_proxy", "q": "lipid_q"})

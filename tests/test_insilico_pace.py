@@ -52,8 +52,12 @@ def test_proxy_detects_vlc_loss():
     design = lipidome.sample_design(x.index)
     eff = lipidome.genotype_effects(lipidome.compute_proxies(feats, x), design, ages=("4w", "8w"))
     assert eff.loc["VLC_ceramide", "lfc_spade"] < -0.8 and eff.loc["VLC_ceramide", "q"] < 0.05
-    ev = lipidome.enzyme_lipid_evidence(eff.dropna(subset=["t"]))
+    ev = lipidome.enzyme_lipid_evidence(eff)
     assert ev.loc["CERS2", "activity_t"] < 0 < ev.loc["CERS6", "activity_t"]
+    # proxies whose classes are absent from the toy data have t = NaN; their
+    # enzymes get no lipid evidence rather than crashing the projection
+    assert eff.loc["Phyto_hydroxylation", "t"] != eff.loc["Phyto_hydroxylation", "t"]
+    assert "DEGS2" not in ev.index
 
 
 def test_linex_names():
