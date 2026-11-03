@@ -120,6 +120,10 @@ def read_skyline(path: str | Path, blank_pat: str = r"blank|blk|solvent", qc_pat
     df[rt] = pd.to_numeric(df[rt], errors="coerce")
     if area:
         df[area] = pd.to_numeric(df[area], errors="coerce")
+    if add:
+        # Blank adduct cells read as NaN, which groupby/pivot_table would drop and
+        # NaN != NaN would break the feature lookup, losing those intensities.
+        df[add] = df[add].fillna("").astype(str)
     key = [name] + ([add] if add else [])
     g = df.groupby(key, dropna=False)
     feats = g.agg(rt=(rt, "median"), **({"mz": (mzc, "first")} if mzc else {})).reset_index()

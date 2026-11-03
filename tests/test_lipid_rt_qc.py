@@ -248,6 +248,22 @@ def test_skyline_long_format(tmp_path):
     assert res["flag_rt"].sum() >= 2
 
 
+def test_skyline_blank_adduct_keeps_intensities(tmp_path):
+    p = tmp_path / "skyline.csv"
+    pd.DataFrame({
+        "Molecule Name": ["PC 34:1", "PC 34:1", "Cer 18:1;O2/24:0", "Cer 18:1;O2/24:0"],
+        "Precursor Adduct": ["[M+H]+", "[M+H]+", None, None],
+        "Precursor Mz": [760.585, 760.585, 650.6, 650.6],
+        "Retention Time": [10.1, 10.2, 12.0, 12.1],
+        "Replicate Name": ["S1", "S2", "S1", "S2"],
+        "Area": [100.0, 110.0, 50.0, 60.0],
+    }).to_csv(p, index=False)
+    ds = read_skyline(p)
+    cer = ds.features.index[ds.features["name"] == "Cer 18:1;O2/24:0"][0]
+    assert ds.features.loc[cer, "adduct"] == ""
+    assert ds.intensity.loc[cer].tolist() == [50.0, 60.0]
+
+
 def test_cli_and_report(msdial_file, tmp_path, capsys):
     p, _, _ = msdial_file
     out = tmp_path / "qc"
