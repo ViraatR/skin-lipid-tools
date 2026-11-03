@@ -38,10 +38,11 @@ PATHWAY_PATTERNS = {
 
 
 def _catalytic_ser(active_site: str, seq: str) -> bool:
-    for pos in re.findall(r"ACT_SITE (\d+)", active_site or ""):
-        i = int(pos) - 1
+    # Read each site's own annotation only, so one residue's note never leaks into the next
+    for m in re.finditer(r"ACT_SITE (\d+)\b(.*?)(?=ACT_SITE \d|$)", active_site or "", re.S):
+        i = int(m.group(1)) - 1
         if 0 <= i < len(seq) and seq[i] == "S":
-            note = active_site.split(f"ACT_SITE {pos}", 1)[1][:120].lower()
+            note = m.group(2).lower()
             if "nucleophile" in note or "charge relay" in note or "acyl-ester" in note or "note" not in note:
                 return True
     return False

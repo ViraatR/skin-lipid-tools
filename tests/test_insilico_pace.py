@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from insilico_pace import lipidome, rank
+from insilico_pace.catalog import _catalytic_ser
 from insilico_pace.transcriptome import bh, contrast
 from lipidname import parse
 
@@ -123,3 +124,25 @@ def test_control_recovery_percentiles_and_p():
     assert p < 0.001                                       # all controls outrank every other enzyme
     _, p_bottom = rank.control_recovery(ranked.assign(score=np.linspace(0, 1, n)))
     assert p_bottom > 0.99
+
+
+def _seq(**residues):
+    seq = ["A"] * 200
+    for pos, aa in residues.items():
+        seq[int(pos[1:]) - 1] = aa
+    return "".join(seq)
+
+
+def test_catalytic_ser_reads_each_sites_own_note():
+    ev = '/evidence="ECO:0000255|PROSITE-ProRule:PRU10037"'
+    # Nucleophile Ser, and a Ser with no note, both count
+    assert _catalytic_ser(f'ACT_SITE 152; /note="Nucleophile"; {ev}', _seq(p152="S"))
+    assert _catalytic_ser("ACT_SITE 40", _seq(p40="S"))
+    assert not _catalytic_ser("", _seq(p40="S"))
+    # A Ser proton acceptor must not borrow the next site's "Nucleophile" note
+    site = f'ACT_SITE 5; /note="Proton acceptor"; {ev}; ACT_SITE 9; /note="Nucleophile"; {ev}'
+    assert not _catalytic_ser(site, _seq(p5="S", p9="H"))
+    # ACT_SITE 12 must not be read from the annotation of ACT_SITE 123
+    site = f'ACT_SITE 123; /note="Nucleophile"; {ev}; ACT_SITE 12; /note="Proton acceptor"; {ev}'
+    assert not _catalytic_ser(site, _seq(p12="S", p123="D"))
+    assert _catalytic_ser(site, _seq(p123="S"))
