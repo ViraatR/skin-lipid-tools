@@ -310,6 +310,25 @@ def test_blank_only_feature_is_flagged():
     assert out["flag_blank"].tolist() == [False, True, False]
 
 
+def test_qc_cv_and_detection_rate_flags():
+    from lipid_rt_qc.io import Dataset
+    feats = pd.DataFrame({"name": ["PC 34:1", "PC 36:2", "PE 38:4"], "rt": [10.0, 10.5, 11.0],
+                          "mz": np.nan, "adduct": ""}, index=["a", "b", "c"])
+    inten = pd.DataFrame({"QC_1": [100.0, 50.0, 100.0], "QC_2": [100.0, 100.0, np.nan],
+                          "QC_3": [100.0, 150.0, np.nan], "S1": [1e5, 1e5, np.nan], "S2": [1e5, 0.0, np.nan]},
+                         index=feats.index)
+    samples = pd.DataFrame({"type": ["qc", "qc", "qc", "sample", "sample"]}, index=inten.columns)
+    out = checks.blank_and_qc(Dataset(feats, inten, samples), max_cv=30.0, min_detect=0.75)
+    # a is perfectly stable; b has CV 50%; c is in only one QC, so its CV is undefined
+    assert out["qc_cv"].iloc[:2].tolist() == pytest.approx([0.0, 50.0])
+    assert np.isnan(out.at["c", "qc_cv"])
+    assert out["flag_qc_cv"].tolist() == [False, True, False]
+    # a zero intensity counts as not detected, the same as a missing value
+    assert out["detect_rate"].tolist() == [1.0, 0.5, 0.0]
+    assert out["flag_low_detect"].tolist() == [False, True, True]
+    assert "flag_blank" not in out
+
+
 @pytest.mark.parametrize("name,n", [
     ("TG 18:1_18:2_18:1;O(FA 16:0)", 4), ("DG 16:0_18:1;O(FA 18:0)", 3),
     ("SM 34:1;O2(FA 18:0)", 3), ("TG 52:2", 3), ("PC 34:1", 2), ("LPC 18:1", 1),
