@@ -126,6 +126,16 @@ def test_control_recovery_percentiles_and_p():
     assert p_bottom > 0.99
 
 
+def test_control_recovery_without_controls_returns_nan_quietly(recwarn):
+    ranked = pd.DataFrame({
+        "rank": [1, 2], "score": [1.0, 0.5], "AD_LS_vs_HC_lfc": 0.0,
+        "th2_lfc": 0.0, "lipid_proxy": "", "activity_t": np.nan,
+    }, index=["G1", "G2"])
+    ctl, p = rank.control_recovery(ranked)
+    assert ctl.empty and np.isnan(p)
+    assert not recwarn.list
+
+
 def _seq(**residues):
     seq = ["A"] * 200
     for pos, aa in residues.items():

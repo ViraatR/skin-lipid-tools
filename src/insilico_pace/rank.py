@@ -69,7 +69,10 @@ def rank_enzymes(catalog: pd.DataFrame, expr: pd.DataFrame, lipid_ev: pd.DataFra
 
 
 def control_recovery(ranked: pd.DataFrame) -> tuple[pd.DataFrame, float]:
-    """Where do the positive controls land, and is that better than chance?"""
+    """Where do the positive controls land, and is that better than chance?
+
+    The p-value is NaN when no control (or no other enzyme) is in the ranking.
+    """
     from scipy.stats import mannwhitneyu
 
     n = len(ranked)
@@ -77,6 +80,8 @@ def control_recovery(ranked: pd.DataFrame) -> tuple[pd.DataFrame, float]:
     out = ctl[["rank", "score", "AD_LS_vs_HC_lfc", "th2_lfc", "lipid_proxy", "activity_t"]].copy()
     out["percentile"] = 100 * (1 - (out["rank"] - 1) / n)
     rest = ranked.loc[~ranked.index.isin(POSITIVE_CONTROLS), "score"]
+    if ctl.empty or rest.empty:  # nothing to compare; NaN rather than a scipy warning
+        return out, float("nan")
     p = mannwhitneyu(ctl["score"], rest, alternative="greater").pvalue
     return out, p
 
