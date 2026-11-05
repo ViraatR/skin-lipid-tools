@@ -3,7 +3,7 @@
 Contrasts (all public):
   AD_LS_vs_HC, AD_NL_vs_HC, AD_LS_vs_NL, PSO_LS_vs_HC  GSE121212 RNA-seq (Tsoi 2019)
   KC_IL4, KC_IL13, KC_IL17A, KC_IFNa, KC_IFNg, KC_TNF GSE36287 primary keratinocytes
-  ACNE_LS_vs_NL                                       GSE53795 (from lab Slack)
+  ACNE_LS_vs_NL                                       GSE53795
 Cell-type localisation: Human Protein Atlas skin scRNA-seq clusters.
 
 Statistics are deliberately simple and transparent: log2 CPM (RNA-seq) or RMA

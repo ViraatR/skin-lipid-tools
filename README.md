@@ -1,9 +1,6 @@
 # skin-lipid-tools
 
-> **Private.** Keep this repo private until Dr. Kolar has seen it. It uses only public data, but it
-> predicts targets for work the lab has not yet published.
-
-This repo holds two computational projects for skin lipid biology. Both are built on public data.
+Two computational projects I built for skin lipid biology, both using public data.
 
 | | Project | Question | Status |
 |---|---|---|---|
@@ -25,9 +22,8 @@ python -m venv .venv && .venv/bin/pip install -e ".[linex,dev]"
 ## Project 1: in silico PACE
 
 PACE (Profiling of Active Cutaneous Enzymes) pairs FP-probe chemoproteomics with lipidomics.
-This project is the computational counterpart. It builds a catalog of the enzymes that could matter,
-scores each one against every public dataset that says something about AD, and produces a ranked list.
-That list gives the IL-4/IL-13 keratinocyte ABPP experiment something to test against.
+This project is the computational side of that idea. I built a catalog of enzymes that could matter,
+scored each one against the public datasets that say something about AD, and ranked them.
 
 ### Layers
 
@@ -38,7 +34,7 @@ That list gives the IL-4/IL-13 keratinocyte ABPP experiment something to test ag
 | UniProt (reviewed human; lipid metabolism or hydrolase EC classes) | 764 enzymes, Rhea reactions, ChEMBL targets. **99 FP-reactive serine hydrolases**, called from a catalytic Ser plus serine-hydrolase InterPro folds |
 | GSE121212 (Tsoi 2019): AD, psoriasis and healthy skin RNA-seq | AD lesional vs healthy (21 vs 38), AD non-lesional vs healthy, paired AD LS vs NL, psoriasis vs healthy |
 | GSE36287: primary keratinocytes + IL-4, IL-13, IL-17A, IFN-α, IFN-γ, TNF | Th2 and other cytokine responses (n=3 per arm, paired by donor) |
-| GSE53795: acne lesional vs non-lesional | Side contrast. This is the dataset from lab Slack; it turned out to be acne, not AD |
+| GSE53795: acne lesional vs non-lesional | Side contrast (acne, not AD) |
 | Human Protein Atlas skin scRNA-seq | Top skin cell type, keratinocyte expression and specificity, suprabasal vs basal |
 
 **Layer 2: lipidome-inferred enzyme activity** (`lipidome.py`)
@@ -67,10 +63,10 @@ when the enzyme is barely expressed in skin. Every component is a percentile, an
 | Control | Rank / 764 | Why it's a control |
 |---|---|---|
 | ELOVL3 | 12 | IL-4/IL-13 suppress it via STAT6. It is down 2.1 log2 in AD skin, and the lipidome's ≥C20 FA fraction falls |
-| SCD | 60 | Up in AD skin, matching the lab's scRNA reanalysis |
+| SCD | 60 | Up in AD skin |
 | ELOVL6 | 105 | Suppressed by IL-4/IL-13, and down in AD differentiated keratinocytes |
 | ASAH1 | 165 | Its β subunit is the SM deacylase |
-| CERS3 / ELOVL4 | 306 / 370 | The lipidome shows the strongest ULC-ceramide loss (q < 0.001), but transcripts are flat in bulk AD. This is the "activity changes without mRNA change" case that PACE exists to measure |
+| CERS3 / ELOVL4 | 306 / 370 | The lipidome shows the strongest ULC-ceramide loss (q < 0.001), but transcripts are flat in bulk AD. A case where activity changes without an mRNA change |
 
 **The lipidome shows the AD chain-shortening signature.** In Spade vs WT skin, VLC and ULC Cer[NS]
 fall about 1.9 log2 by 10 weeks. FA ≥C20 falls, SM → Cer drops, and α-hydroxy, phyto and GlcCer
@@ -80,17 +76,17 @@ fractions rise. The effects are small at P0 and grow as dermatitis develops ([fi
 suprabasal-keratinocyte enzymes that are up in AD lesions, and PC deacylation rises in the lipidome.
 Below them come DGAT2, AADACL2, ALOXE3, DEGS2, FA2H and ELOVL3.
 
-**PACE-visible predictions.** [`pace_serine_hydrolase_predictions.csv`](results/insilico_pace/pace_serine_hydrolase_predictions.csv)
-lists the skin-expressed FP-reactive enzymes in ranked order. Those most likely to differ in the
-IL-4/IL-13 ABPP gel/MS are PLA2G4D, PLA2G4E, PLA2G4F, AADACL2, PNLIPRP3, EPHX3, LIPA, PNPLA1 and ABHD12.
+**Serine hydrolase predictions.** [`pace_serine_hydrolase_predictions.csv`](results/insilico_pace/pace_serine_hydrolase_predictions.csv)
+lists the skin-expressed FP-reactive enzymes in ranked order. The ones I'd expect to change most are
+PLA2G4D, PLA2G4E, PLA2G4F, AADACL2, PNLIPRP3, EPHX3, LIPA, PNPLA1 and ABHD12.
 
 ### Caveats
 
 - **The lipidome is from mouse.** The obvious human option, the 2026 Zenodo stratum corneum set
   (record 20365907), is polar metabolomics: only 26 of its 195 features are lipids, and it has no ceramide
-  species, so LINEX2 cannot use it. The human AD biopsy lipidome ST003291 is 91% missing values. Swap in a human
-  SC lipidome as soon as one is available, or use the lab's own. `lipidome.load_spade()` is the only function to replace.
-- **Transcripts are not activity.** That gap is the reason for PACE. The ranking is a prior to test against, not a result.
+  species, so LINEX2 cannot use it. The human AD biopsy lipidome ST003291 is 91% missing values. I'll switch to a
+  human SC lipidome once a usable one is available. `lipidome.load_spade()` is the only function that has to change.
+- **Transcripts are not activity.** The ranking is a prior to test against, not a result.
 - **Many-to-one proxies.** LPC/PC can't tell apart the 11 PLA2s it maps to; the transcript and cell-type layers break the tie.
 - **Small cytokine arm.** The cytokine dataset has n = 3 per arm. IL-4 → ELOVL3 is −1.3 log2 but p = 0.13.
 - **Atlas not used yet.** The Human Skin Cell Atlas objects (Zenodo 21022952; `ife_extended.h5ad` is 3.4 GB)
@@ -99,11 +95,10 @@ IL-4/IL-13 ABPP gel/MS are PLA2G4D, PLA2G4E, PLA2G4F, AADACL2, PNLIPRP3, EPHX3, 
 
 ### Next steps
 
-1. When the ABPP hits come back, compare them with `pace_serine_hydrolase_predictions.csv`. That comparison is the "predicted, then measured" figure.
+1. Compare `pace_serine_hydrolase_predictions.csv` against measured enzyme activity data.
 2. Add HSCA `ife_extended.h5ad` pseudobulk by keratinocyte layer (read in backed mode; about 3.4 GB on disk).
 3. Replace the mouse lipidome with a human AD stratum corneum lipidome.
-4. Add the IL-4/STAT6 differentiating-keratinocyte RNA-seq (GSE58749) once its accession is confirmed.
-   The link in the original notes points to E-GEOD-21413.
+4. Add the IL-4/STAT6 differentiating-keratinocyte RNA-seq (GSE58749) once I've confirmed the accession.
 
 ---
 
@@ -126,9 +121,9 @@ The output is `lipid_qc_report.html`, a self-contained page with figures that op
 | Flag | What it means |
 |---|---|
 | **RT off-model** | The observed RT is more than 3 robust SD (and more than 0.2 min) from the RT predicted for that class, C and DB. The model is trained on the same run, and each feature is scored out-of-fold, so a bad annotation can't vouch for itself |
-| **Elution order** | Reverse-phase ordering is broken: more carbons should elute later and more double bonds earlier. Cer[NS] should elute before its DHCer (the rule in the lab's Skyline notes). Each violating pair is blamed on the member that fits worse |
+| **Elution order** | Reverse-phase ordering is broken: more carbons should elute later and more double bonds earlier. Cer[NS] should elute before its DHCer. Each violating pair is blamed on the member that fits worse |
 | **Isobar fits RT better** | Another class or adduct has the same m/z within 5 ppm, and it matches the RT when the current annotation doesn't. Examples: PC x:y [M+H]⁺ vs PC (x−2):(y−3) [M+Na]⁺, and Cer [M+HAc−H]⁻ vs hydroxy-Cer [M−H]⁻ |
-| **BCFA isomer candidate** | The same molecular species also appears 0.3–1 carbon-equivalents earlier. That is the elution signature of monomethyl branched-chain (iso/anteiso) acyl isomers, which is the ambiguity Kolar's JLR 2024 paper addresses. Ether O-/P- pairs, labelled standards and split peaks get their own labels |
+| **BCFA isomer candidate** | The same molecular species also appears 0.3–1 carbon-equivalents earlier. That is the elution signature of monomethyl branched-chain (iso/anteiso) acyl isomers. Ether O-/P- pairs, labelled standards and split peaks get their own labels |
 | **Blank / QC CV** | Sample/blank ratio below 3, or pooled-QC CV above 30%. Both thresholds are settable |
 
 **RT model.** For each class it fits a robust (Huber) linear trend, RT ~ C + DB, which is the
@@ -139,7 +134,7 @@ ether TGs get their own trend lines. Classes the run has never seen are reported
 
 ### Validation on public data
 
-There are three public reverse-phase lipidomics runs, all annotated with MS-DIAL. MTBLS5861 includes skin.
+I validated it on three public reverse-phase lipidomics runs, all annotated with MS-DIAL. MTBLS5861 includes skin.
 Reports are in [`results/lipid_rt_qc`](results/lipid_rt_qc).
 
 | Run | Samples | Lipids | Classes | Median \|RT error\| (min) | R² | RT off-model | Isobar better | BCFA cand. |
@@ -163,12 +158,12 @@ Flag rate on untouched features at the default threshold: MTBLS5861: 9% · MTBLS
 
 Power depends on the run. MTBLS14692 annotates only sum compositions, and its RT scatter is twice as wide, so recall there is lower at the same false-positive rate. Use `lipid-rt-qc benchmark` to see what to expect on a given dataset.
 
-**What this shows.** RT alone reliably catches wrong-peak picks and chain-length or unsaturation mislabels,
+RT alone reliably catches wrong-peak picks and chain-length or unsaturation mislabels,
 and it catches most sodium-adduct mix-ups. It can't separate PC x:y from PE (x+3):y, because they co-elute;
-that's chemistry, not a model limit, so the report says those need MS/MS head-group fragments. "Clean"
+that's a chemistry limit rather than a model limit, so the report marks those as needing MS/MS head-group fragments. "Clean"
 features in public data include the depositors' own mis-annotations, so the false-positive rate is an upper bound.
 
-### Using it on the lab's data
+### Running it on your own data
 
 1. In MS-DIAL, export the alignment result (Height or Area) as a `.txt` file, then run `lipid-rt-qc run export.txt`.
    Blank and QC samples are picked up from MS-DIAL's *File type* row.

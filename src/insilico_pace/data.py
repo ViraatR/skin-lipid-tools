@@ -31,7 +31,7 @@ GEO = {
     "GSE121212": "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE121nnn/GSE121212/suppl/GSE121212_readcount.txt.gz",
     # Primary keratinocytes + IL-4, IL-13, IL-17A, IFN-a, IFN-g, TNF (GPL570)
     "GSE36287": "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE36nnn/GSE36287/matrix/GSE36287_series_matrix.txt.gz",
-    # Acne lesional vs non-lesional (GPL570); flagged in lab Slack, used as a side contrast
+    # Acne lesional vs non-lesional (GPL570), used as a side contrast
     "GSE53795": "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE53nnn/GSE53795/matrix/GSE53795_series_matrix.txt.gz",
 }
 GEO_META = {

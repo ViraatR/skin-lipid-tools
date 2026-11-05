@@ -2,9 +2,8 @@
 
 1. rt_outliers        observed RT disagrees with the dataset's own RT model
 2. elution_order      within a class, RT must rise with carbons and fall with
-                      double bonds (reverse phase). Includes the Cer vs DHCer rule
-                      from the lab's Skyline notes: Cer[NS] x:y elutes before
-                      Cer[NDS] x:(y-1).
+                      double bonds (reverse phase). Includes the Cer vs DHCer rule:
+                      Cer[NS] x:y elutes before Cer[NDS] x:(y-1).
 3. isobars            other plausible annotations at the same m/z, and whether
                       the RT model prefers one of them
 4. duplicates         one annotation at several RTs: split peak, positional

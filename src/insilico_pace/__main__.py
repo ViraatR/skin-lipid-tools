@@ -118,9 +118,9 @@ def _summary(ranked, sh, ctl, p, effects, linex, expr, out):
         "## Top 25 candidates",
         _fmt(ranked[cols].head(25).round(3)),
         "",
-        "## Serine hydrolases: predictions for the IL-4/IL-13 keratinocyte ABPP experiment",
+        "## Serine hydrolase predictions",
         "Skin-expressed FP-reactive enzymes, ranked. `th2_lfc` is the mean IL-4/IL-13 transcript change in "
-        "primary keratinocytes (GSE36287); ABPP measures activity, so transcript changes are a prior, not a prediction of signal size.",
+        "primary keratinocytes (GSE36287). Transcript changes are a prior, not a measure of enzyme activity.",
         _fmt(sh[cols + ["KC_nCPM"]].head(20).round(3)),
         "",
         "## Lipidome activity proxies (Spade vs WT, age-adjusted, 4-10 wk)",

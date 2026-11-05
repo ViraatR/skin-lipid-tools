@@ -43,8 +43,8 @@ Mean percentile 78; one-sided Mann-Whitney vs all other enzymes p = 0.0089.
 | DEGS1    |     24 |   0.559 | False              | down           |            -0.518 |     0.104 | DHCer_desaturation  |        23.8  | suprabasal keratinocytes   |
 | SPTLC3   |     25 |   0.559 | False              | down           |            -0.801 |    -0.241 | nan                 |       nan    | suprabasal keratinocytes   |
 
-## Serine hydrolases: predictions for the IL-4/IL-13 keratinocyte ABPP experiment
-Skin-expressed FP-reactive enzymes, ranked. `th2_lfc` is the mean IL-4/IL-13 transcript change in primary keratinocytes (GSE36287); ABPP measures activity, so transcript changes are a prior, not a prediction of signal size.
+## Serine hydrolase predictions
+Skin-expressed FP-reactive enzymes, ranked. `th2_lfc` is the mean IL-4/IL-13 transcript change in primary keratinocytes (GSE36287). Transcript changes are a prior, not a measure of enzyme activity.
 | gene     |   rank |   score | serine_hydrolase   | ad_direction   |   AD_LS_vs_HC_lfc |   th2_lfc | lipid_proxy    |   activity_t | top_skin_cell_type           |   KC_nCPM |
 |:---------|-------:|--------:|:-------------------|:---------------|------------------:|----------:|:---------------|-------------:|:-----------------------------|----------:|
 | PLA2G4D  |      2 |   0.673 | True               | up             |             1.27  |    -0.121 | PC_deacylation |         4.79 | suprabasal keratinocytes     |       5.8 |
