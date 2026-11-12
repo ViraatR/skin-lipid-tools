@@ -428,3 +428,13 @@ def test_benchmark_detects_wrong_peaks(msdial_file):
     assert s.loc["wrong_peak", "auc"] > 0.9
     assert s.loc["wrong_peak", "recall"] > 0.5
     assert s.loc["wrong_peak", "fpr_clean"] < 0.1
+
+
+def test_benchmark_with_nothing_scored_summarises_to_empty(msdial_file):
+    from lipid_rt_qc.evaluate import BENCH_COLS, benchmark, summarise
+
+    p, _, _ = msdial_file
+    b = benchmark(read_msdial(p), kinds=[], seeds=(0,))
+    assert b.empty and list(b.columns) == BENCH_COLS
+    s = summarise(b)
+    assert s.empty and list(s.columns) == ["n_injected", "auc", "recall", "fpr_clean"]

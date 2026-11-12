@@ -43,6 +43,7 @@ def _mutate(l, kind: str, rng: np.random.Generator):
 
 
 KINDS = ["carbon_pm2", "db_pm1", "class_isobar", "na_adduct", "wrong_peak"]
+BENCH_COLS = ["error_type", "seed", "n_features", "n_injected", "auc", "recall", "fpr_clean"]
 
 
 def inject(ds: Dataset, kind: str, frac: float = 0.05, seed: int = 0) -> tuple[Dataset, pd.Index]:
@@ -93,7 +94,8 @@ def benchmark(ds: Dataset, kinds=KINDS, frac: float = 0.05, seeds=(0, 1, 2), z_t
                 "recall": scored.loc[y, "flag_rt"].mean(),
                 "fpr_clean": scored.loc[~y, "flag_rt"].mean(),
             })
-    return pd.DataFrame(rows)
+    # Keep the columns even when nothing could be scored, so summarise() still works
+    return pd.DataFrame(rows, columns=BENCH_COLS)
 
 
 def summarise(bench: pd.DataFrame) -> pd.DataFrame:
